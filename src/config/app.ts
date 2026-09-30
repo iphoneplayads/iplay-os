@@ -36,3 +36,13 @@ export const SERVICE_MODE_LABEL: Record<string, string> = {
 };
 
 export const INSTALLMENT_DEFAULT_COUNT = 10;
+
+/**
+ * Prova social do Google (valores reais informados pelo proprietário).
+ * Fonte única — sem repetir números no JSX. Sem API nesta etapa.
+ */
+export const SOCIAL_PROOF = {
+  googleRating: 4.8,
+  googleReviewCount: 113,
+  googleReviewsUrl: 'https://share.google/7UGKSTUHppFp5C0KO',
+} as const;

@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { APP_CONFIG } from '@/config/app';
+import { APP_CONFIG, SOCIAL_PROOF } from '@/config/app';
 import { SERVICE_SLUGS } from '@/config/constants';
 import { trackEvent } from '@/lib/analytics/events';
+import { GoogleProof } from '@/components/brand/GoogleProof';
 import { BeforeAfter } from '@/components/brand/BeforeAfter';
 import {
   BackGlassIcon,
   BatteryIcon,
-  BoltIcon,
   CalendarIcon,
   CardIcon,
   ChatIcon,
@@ -18,6 +18,7 @@ import {
   ShieldIcon,
   SparkIcon,
   TagIcon,
+  WhatsAppIcon,
 } from '@/components/brand/icons';
 
 const WA_LINK = `https://wa.me/${APP_CONFIG.company.whatsapp}?text=${encodeURIComponent('Olá! Tenho dúvidas sobre o conserto do meu iPhone.')}`;
@@ -47,10 +48,26 @@ const JOURNEY = [
 ];
 
 const BENEFIT_ROWS = [
-  { text: 'Veja o preço antes de agendar', Icon: TagIcon },
-  { text: 'Agendamento rápido', Icon: BoltIcon },
-  { text: 'Serviço com garantia', Icon: ShieldIcon },
-  { text: 'Até 10x sem juros', Icon: CardIcon },
+  {
+    text: 'Agende sem precisar falar com ninguém',
+    desc: 'Escolha o serviço, veja o valor e agende direto pelo site.',
+    Icon: CalendarIcon,
+  },
+  {
+    text: 'Delivery sem custos',
+    desc: 'Nós vamos até você sem cobrança de deslocamento.',
+    Icon: PinIcon,
+  },
+  {
+    text: 'Serviços com até 1 ano de garantia',
+    desc: 'Garantia conforme o serviço realizado.',
+    Icon: ShieldIcon,
+  },
+  {
+    text: 'Até 10x sem juros',
+    desc: 'Facilidade também na hora de pagar.',
+    Icon: CardIcon,
+  },
 ];
 
 export function HomePage() {
@@ -62,55 +79,71 @@ export function HomePage() {
     <div>
       {/* ============ HERO ============ */}
       <section
-        className="rounded-3xl border border-linha p-8 sm:p-12 lg:p-16"
-        style={{ background: 'radial-gradient(1000px 440px at 100% 0%, #1a2b12 0, transparent 60%), #0A0F0D' }}
+        className="relative overflow-hidden p-8 sm:p-12 lg:p-16"
+        style={{ background: 'radial-gradient(1100px 520px at 85% 20%, #1c3013 0, transparent 60%), radial-gradient(800px 500px at 10% 100%, #101a13 0, transparent 55%), #0A0F0D' }}
       >
-        <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
+        {/* glow cinematográfico atrás do aparelho + vinheta */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(560px 480px at 78% 45%, rgba(180,240,0,0.16) 0, transparent 62%), radial-gradient(120% 120% at 50% 45%, transparent 55%, #0A0F0D 100%)',
+          }}
+        />
+        <div className="relative grid items-center gap-10 lg:grid-cols-[1.2fr_1fr] lg:gap-12">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-linha bg-musgo px-3 py-1 text-xs font-bold text-gelo">
+            <p className="inline-flex items-center gap-2 rounded-full border border-linha bg-noite px-3 py-1 text-xs font-bold text-gelo">
               <span aria-hidden="true" className="h-2 w-2 rounded-full bg-lima" />
-              Atendimento delivery
+              Assistência técnica especializada em iPhone
             </p>
-            <h1 className="mt-5 font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-gelo sm:text-5xl xl:text-6xl">
-              Seu iPhone deu problema?
+            <h1 className="mt-5 font-display text-5xl font-extrabold leading-[1.04] tracking-tight text-gelo sm:text-6xl xl:text-7xl">
+              Seu iPhone
               <br />
-              <span className="text-lima">A gente resolve onde você estiver.*</span>
+              deu problema?
+              <br />
+              <span className="text-lima">
+                A gente resolve
+                <br />
+                onde você estiver.*
+              </span>
             </h1>
-            <p className="mt-4 max-w-xl text-base text-nevoa sm:text-lg">
+            <p className="mt-4 max-w-xl text-lg text-nevoa">
               Escolha o modelo, veja o preço antes de agendar e deixe o resto com a iPlay.
             </p>
             <div className="mt-7 flex flex-col gap-2 sm:flex-row">
               <Link
                 to="/agendar"
                 onClick={() => trackEvent('booking_started', { entry: 'home_cta' })}
-                className="min-h-[52px] rounded-2xl bg-lima px-6 py-4 text-center text-base font-bold text-noite transition hover:brightness-110 active:scale-[0.99] sm:text-lg"
+                className="flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-lima px-7 py-4 text-center text-base font-bold text-noite transition hover:brightness-110 active:scale-[0.99] sm:text-lg"
               >
-                Ver preço e agendar
+                <CalendarIcon className="h-5 w-5" />
+                Ver preço e agendar →
               </Link>
               <a
                 href={WA_LINK}
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Tenho dúvidas — conversar no WhatsApp"
-                className="flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-linha bg-musgo px-6 py-4 text-center text-base font-semibold text-gelo transition hover:border-cinza sm:text-lg"
+                className="flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border border-linha bg-noite px-7 py-4 text-center text-base font-semibold text-white transition hover:border-cinza sm:text-lg"
               >
-                <ChatIcon className="h-5 w-5 text-lima" />
+                <WhatsAppIcon className="h-5 w-5" />
                 Tenho dúvidas
               </a>
             </div>
+            <p className="mt-8 max-w-xl text-sm leading-relaxed text-nevoa">
+              *Troca de tela e bateria: atendimento em domicílio para todos os modelos. Troca de vidro
+              traseiro: atendimento no local disponível para modelos selecionados — consulte a
+              disponibilidade. Para outros problemas, contamos com serviço leva e traz.
+            </p>
           </div>
           {/* Assets definitivos em /public/brand (mesmo aparelho/enquadramento) */}
           <BeforeAfter beforeSrc="/brand/iphone-broken.png" afterSrc="/brand/iphone-repaired.png" />
         </div>
-        <p className="mt-8 max-w-3xl text-sm leading-relaxed text-nevoa">
-          *Trocas de tela, bateria e vidro traseiro são realizadas no local para modelos selecionados.
-          Para outros problemas ou modelos, contamos com serviço leva e traz. Consulte os modelos e
-          serviços disponíveis.
-        </p>
       </section>
 
       {/* ============ SERVIÇOS ============ */}
-      <section className="mt-20 sm:mt-24">
+      <section className="mt-10 sm:mt-14">
         <Eyebrow>Serviços</Eyebrow>
         <h2 className="mt-3 font-display text-3xl font-extrabold text-gelo sm:text-4xl">
           O que aconteceu com seu iPhone?
@@ -122,13 +155,15 @@ export function HomePage() {
               key={slug}
               to={`/agendar?servico=${slug}`}
               onClick={() => trackEvent('booking_started', { entry: 'home_problem', serviceSlug: slug })}
-              className="group rounded-3xl border border-linha bg-musgo p-7 transition hover:border-lima active:scale-[0.99] sm:p-8"
+              className="group flex min-h-[104px] items-center gap-4 rounded-3xl border border-linha bg-musgo p-5 transition hover:border-lima active:scale-[0.99]"
             >
-              <IconChip size={128}><Icon /></IconChip>
-              <p className="mt-5 font-display text-2xl font-extrabold text-gelo">{label}</p>
-              <p className="mt-2 text-sm font-bold text-lima">
-                Ver preço →
-              </p>
+              <IconChip size={64}><Icon /></IconChip>
+              <span className="min-w-0">
+                <span className="block font-display text-lg font-extrabold text-gelo">{label}</span>
+                <span className="mt-0.5 block text-sm font-bold text-lima">
+                  Ver preço →
+                </span>
+              </span>
             </Link>
           ))}
         </div>
@@ -166,20 +201,20 @@ export function HomePage() {
           </ol>
         </div>
         <div aria-hidden="true" className="ml-[31px] h-8 w-px bg-gradient-to-b from-linha to-lima lg:mx-auto" />
-        <div className="relative rounded-3xl bg-lima p-8 text-noite sm:p-10">
+        <div className="relative rounded-2xl bg-lima px-6 py-5 text-noite sm:px-8">
           <span aria-hidden="true" className="absolute -top-[9px] left-[23px] h-[18px] w-[18px] rotate-45 bg-lima lg:left-1/2 lg:-translate-x-1/2" />
-          <p className="inline-block rounded-full bg-noite px-3 py-1 text-[11px] font-bold tracking-[0.18em] text-lima">
-            CHEGADA
-          </p>
-          <p className="font-display text-4xl font-extrabold tracking-tight sm:text-5xl">PRONTO!</p>
-          <p className="mt-2 text-lg font-bold">Seu iPhone novo de novo.</p>
-          <Link
-            to="/agendar"
-            onClick={() => trackEvent('booking_started', { entry: 'home_journey' })}
-            className="mt-5 inline-block rounded-2xl bg-noite px-6 py-3.5 font-bold text-gelo transition hover:brightness-150"
-          >
-            Começar agora
-          </Link>
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <p className="font-display text-xl font-extrabold tracking-tight sm:text-2xl">
+              PRONTO! <span className="font-bold">Seu iPhone novo de novo.</span>
+            </p>
+            <Link
+              to="/agendar"
+              onClick={() => trackEvent('booking_started', { entry: 'home_journey' })}
+              className="inline-block flex-none rounded-2xl bg-noite px-6 py-3.5 font-bold text-gelo transition hover:brightness-150"
+            >
+              Começar agora
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -215,11 +250,20 @@ export function HomePage() {
           </div>
           {/* SLOT FOTO (futuro): atendimento delivery real — técnico iPlay chegando
               ao cliente. Proporção ~4:3, com overlay escuro para manter o clima. */}
-          <svg viewBox="0 0 400 280" role="img" aria-label="Rota do técnico até você" className="h-auto w-full">
+          <div className="relative">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 blur-2xl"
+              style={{ background: 'radial-gradient(55% 55% at 55% 45%, rgba(180,240,0,0.14) 0, transparent 70%)' }}
+            />
+            <svg viewBox="0 0 400 280" role="img" aria-label="Rota do técnico até você" className="relative h-auto w-full" style={{ maskImage: 'radial-gradient(92% 92% at 50% 50%, black 58%, transparent 100%)', WebkitMaskImage: 'radial-gradient(92% 92% at 50% 50%, black 58%, transparent 100%)' }}>
             <ellipse cx="200" cy="150" rx="180" ry="110" fill="none" stroke="#26322B" strokeWidth="1.5" opacity="0.7" />
             <ellipse cx="200" cy="150" rx="130" ry="78" fill="none" stroke="#26322B" strokeWidth="1" strokeDasharray="4 6" opacity="0.7" />
-            <path d="M20 235 C 110 225, 140 150, 210 140 S 330 95, 380 55" fill="none" stroke="#B4F000" strokeWidth="2.5" strokeDasharray="9 8" strokeLinecap="round" />
+            <path d="M20 235 C 110 225, 140 150, 210 140 S 330 95, 380 55" fill="none" stroke="#B4F000" strokeWidth="3" strokeDasharray="9 8" strokeLinecap="round" />
             <path d="M40 90 C 120 100, 180 70, 250 80" fill="none" stroke="#26322B" strokeWidth="1.5" strokeDasharray="4 6" />
+            <circle cx="120" cy="188" r="3.5" fill="#B4F000" opacity="0.85" />
+            <circle cx="243" cy="128" r="3.5" fill="#B4F000" opacity="0.85" />
+            <circle cx="330" cy="82" r="3.5" fill="#B4F000" opacity="0.85" />
             <g>
               <circle cx="20" cy="235" r="17" fill="none" stroke="#9AA39E" strokeWidth="2" />
               <circle cx="20" cy="235" r="6" fill="#9AA39E" />
@@ -233,10 +277,19 @@ export function HomePage() {
               <text x="380" y="100" textAnchor="middle" fill="#B4F000" fontSize="12" fontWeight="700">Você</text>
             </g>
             <g transform="translate(196,124)">
-              <rect x="-38" y="-15" width="76" height="30" rx="15" fill="#0A0F0D" stroke="#B4F000" strokeWidth="1.5" />
-              <text textAnchor="middle" dy="5" fill="#F5F6F2" fontSize="12" fontWeight="700">a caminho</text>
+              <rect x="-72" y="-16" width="144" height="32" rx="16" fill="#0A0F0D" stroke="#B4F000" strokeWidth="1.5" />
+              <text textAnchor="middle" dy="4.5" fill="#F5F6F2" fontSize="12" fontWeight="700">TÉCNICO A CAMINHO</text>
             </g>
           </svg>
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background: 'radial-gradient(90% 90% at 50% 50%, transparent 52%, #16211A 100%)',
+                boxShadow: 'inset 0 0 80px 26px #16211A',
+              }}
+            />
+          </div>
         </div>
       </section>
 
@@ -255,12 +308,20 @@ export function HomePage() {
             <p className="mt-2 text-base text-cinza">
               Casa, trabalho ou escritório. Você chama, nós cuidamos do resto.
             </p>
+            <GoogleProof
+              rating={SOCIAL_PROOF.googleRating}
+              count={SOCIAL_PROOF.googleReviewCount}
+              url={SOCIAL_PROOF.googleReviewsUrl}
+            />
           </div>
           <ul className="rounded-3xl border border-linha bg-musgo px-6 py-2 sm:px-8">
-            {BENEFIT_ROWS.map(({ text, Icon }) => (
+            {BENEFIT_ROWS.map(({ text, desc, Icon }) => (
               <li key={text} className="flex items-center gap-5 border-t border-linha py-6 first:border-t-0">
                 <IconChip size={52}><Icon /></IconChip>
-                <p className="font-display text-xl font-extrabold text-gelo">{text}</p>
+                <div className="min-w-0">
+                  <p className="font-display text-xl font-extrabold text-gelo">{text}</p>
+                  <p className="mt-0.5 text-sm text-cinza">{desc}</p>
+                </div>
               </li>
             ))}
           </ul>

@@ -6,23 +6,33 @@ import { cn } from '@/lib/utils/format';
 export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-linha bg-noite/90 backdrop-blur">
-      <div className="mx-auto flex h-24 max-w-6xl items-center justify-between px-4 sm:h-28 sm:px-6">
-        <Link to="/" aria-label="iPlay — início">
-          <span className="sm:hidden">
-            <Logo height={72} />
-          </span>
-          <span className="hidden sm:block">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        {/* mobile: logo grande + CTA largo (cabe sem overflow) */}
+        <div className="py-4 sm:hidden">
+          <Link to="/" aria-label="iPlay — início">
             <Logo height={96} />
-          </span>
-        </Link>
-        <nav className="flex items-center gap-2 text-sm">
+          </Link>
           <Link
             to="/agendar"
-            className="rounded-xl bg-lima px-4 py-2.5 font-bold text-noite transition hover:brightness-110 active:scale-[0.99] sm:px-5"
+            className="mt-3 flex min-h-[52px] items-center justify-center rounded-2xl bg-lima px-4 py-3 text-center font-bold text-noite transition hover:brightness-110 active:scale-[0.99]"
           >
             Ver preço e agendar
           </Link>
-        </nav>
+        </div>
+        {/* desktop: linha única */}
+        <div className="hidden h-28 items-center justify-between sm:flex">
+          <Link to="/" aria-label="iPlay — início">
+            <Logo height={104} />
+          </Link>
+          <nav className="flex items-center gap-2 text-sm">
+            <Link
+              to="/agendar"
+              className="rounded-xl bg-lima px-5 py-2.5 font-bold text-noite transition hover:brightness-110 active:scale-[0.99]"
+            >
+              Ver preço e agendar
+            </Link>
+          </nav>
+        </div>
       </div>
     </header>
   );
@@ -31,7 +41,7 @@ export function Header() {
 export function Footer() {
   return (
     <footer className="border-t border-linha bg-noite">
-      <div className="mx-auto max-w-6xl px-4 py-8 text-sm text-cinza sm:px-6">
+      <div className="mx-auto max-w-7xl px-4 py-8 text-sm text-cinza sm:px-6">
         <Logo height={52} />
         <p className="mt-3 font-display font-extrabold text-gelo">
           Conserto de iPhone. <span className="text-lima">Onde você estiver.</span>
@@ -46,7 +56,7 @@ export function PublicLayout({ children, wide }: { children: React.ReactNode; wi
   return (
     <div className="min-h-dvh bg-noite">
       <Header />
-      <main className={`mx-auto w-full px-4 pb-16 pt-6 sm:px-6 ${wide ? 'max-w-6xl' : 'max-w-3xl'}`}>{children}</main>
+      <main className={`mx-auto w-full px-4 pb-16 pt-6 sm:px-6 ${wide ? 'max-w-7xl' : 'max-w-3xl'}`}>{children}</main>
       <Footer />
     </div>
   );

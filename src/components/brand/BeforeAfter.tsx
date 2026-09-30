@@ -90,23 +90,36 @@ export function BeforeAfter({ beforeSrc, afterSrc }: { beforeSrc?: string; after
         onPointerCancel={() => {
           dragging.current = false;
         }}
-        className="relative mx-auto aspect-[2/3] w-full max-w-[440px] cursor-ew-resize touch-pan-y select-none overflow-hidden rounded-3xl border border-linha bg-musgo"
+        className="relative mx-auto aspect-[2/3] w-full max-w-[520px] cursor-ew-resize touch-pan-y select-none overflow-hidden rounded-3xl bg-transparent"
       >
-        {/* fundo compartilhado (fora das camadas = alinhamento garantido) */}
+        {/* glow atrás do aparelho (fundo compartilhado = alinhamento garantido) */}
         <div
           aria-hidden="true"
-          className="absolute inset-0"
-          style={{ background: 'radial-gradient(420px 300px at 50% 30%, rgba(180,240,0,0.12) 0, transparent 65%)' }}
+          className="pointer-events-none absolute inset-0 blur-2xl"
+          style={{
+            background: 'radial-gradient(60% 50% at 50% 42%, rgba(180,240,0,0.20) 0, transparent 70%)',
+            maskImage: 'radial-gradient(75% 75% at 50% 45%, black 25%, transparent 78%)',
+            WebkitMaskImage: 'radial-gradient(75% 75% at 50% 45%, black 25%, transparent 78%)',
+          }}
         />
         {ready ? (
           <>
             {/* base: SEM iPlay — mesmo enquadramento do overlay (object-cover +
                 mesma caixa = alinhamento garantido; sem scale/distortion) */}
-            <img src={beforeSrc} alt="iPhone com tela quebrada" draggable={false} loading="eager" decoding="async" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: '50% 50%' }} />
+            <img src={beforeSrc} alt="iPhone com tela quebrada" draggable={false} loading="eager" decoding="async" className="absolute inset-0 h-full w-full rounded-3xl object-cover [filter:drop-shadow(0_30px_45px_rgba(0,0,0,0.55))]" style={{ objectPosition: '50% 50%' }} />
             {/* overlay: COM iPlay (recortado pela posição do slider) */}
             <div className="absolute inset-0" style={{ clipPath: `inset(0 0 0 ${pos}%)` }}>
-              <img src={afterSrc} alt="iPhone com tela perfeita" draggable={false} loading="eager" decoding="async" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: '50% 50%' }} />
+              <img src={afterSrc} alt="iPhone com tela perfeita" draggable={false} loading="eager" decoding="async" className="absolute inset-0 h-full w-full rounded-3xl object-cover [filter:drop-shadow(0_30px_45px_rgba(0,0,0,0.55))]" style={{ objectPosition: '50% 50%' }} />
             </div>
+            {/* fusão das bordas com o fundo do Hero */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 rounded-3xl"
+              style={{
+                background: 'radial-gradient(115% 115% at 50% 45%, transparent 44%, #0A0F0D 100%)',
+                boxShadow: 'inset 0 0 110px 34px #0A0F0D',
+              }}
+            />
           </>
         ) : (
           <div className="pointer-events-none absolute inset-6 flex flex-col items-center justify-center rounded-2xl border border-dashed border-linha text-center sm:inset-10">
@@ -130,11 +143,11 @@ export function BeforeAfter({ beforeSrc, afterSrc }: { beforeSrc?: string; after
           </span>
         </div>
         {/* labels */}
-        <span className="pointer-events-none absolute left-4 top-4 rounded-full border border-linha bg-noite/90 px-3 py-1.5 text-xs font-bold text-cinza">
-          Sem iPlay
+        <span className="pointer-events-none absolute left-4 top-4 rounded-full border border-linha bg-noite/90 px-4 py-2 text-sm font-bold text-cinza">
+          ✕ Sem iPlay
         </span>
-        <span className="pointer-events-none absolute right-4 top-4 rounded-full bg-lima px-3 py-1.5 text-xs font-bold text-noite">
-          Com iPlay
+        <span className="pointer-events-none absolute right-4 top-4 rounded-full bg-lima px-4 py-2 text-sm font-bold text-noite">
+          ✓ Com iPlay
         </span>
       </div>
       {hint && (
