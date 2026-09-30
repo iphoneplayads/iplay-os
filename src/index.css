@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+/* Identidade oficial iPlay (brand-reference/identidade-iplay.html):
+   Noite 60% · Musgo 20% · Branco 10% · Lima 10% (destaque, nunca fundo de texto longo).
+   Títulos Sora 800 · textos DM Sans. Texto sobre lima é sempre Noite. */
+@theme {
+  --color-noite: #0a0f0d;
+  --color-musgo: #16211a;
+  --color-lima: #b4f000;
+  --color-gelo: #f5f6f2;
+  --color-cinza: #9aa39e;
+  --color-nevoa: #cfd6d2;
+  --color-linha: #26322b;
+
+  --font-display: "Sora", "Arial Black", sans-serif;
+  --font-sans: "DM Sans", Arial, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-noite);
+  color: var(--color-gelo);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--color-lima);
+  outline-offset: 3px;
+}
