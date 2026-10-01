@@ -5,6 +5,7 @@ import {
   validateCustomer,
   validateScheduling,
 } from '@/lib/validation/validators';
+import { endTimeForWindow } from '@/lib/scheduling';
 import { getRepositories } from '@/repositories/factory';
 import { getPrice } from './catalog.service';
 import type { CreateAppointmentInput, CreatedAppointment, FieldError } from '@/types/booking';
@@ -41,9 +42,12 @@ export async function createAppointment(input: CreateAppointmentInput): Promise<
   if (!authoritative) {
     throw new PriceNotAvailableError();
   }
+  // Janela: garante o fim correspondente ao início (a UI sempre envia os dois).
+  const endTime = input.scheduling.endTime ?? endTimeForWindow(input.scheduling.startTime);
   return getRepositories().booking.createAppointment({
     ...input,
     priceId: authoritative.id,
+    scheduling: { ...input.scheduling, endTime },
   });
 }
 

@@ -1,0 +1,18 @@
+# iPlay OS — configuração mínima do Supabase CLI (criado para a função whatsapp-webhook).
+#
+# IMPORTANTE: apenas esta função tem verify_jwt desativado, porque a Meta chama
+# o webhook sem JWT do Supabase (a validação própria é o hub.verify_token).
+# Nenhuma outra função é afetada — e não existe outra função neste projeto.
+# Autenticação global / RLS do banco permanecem intactos.
+
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+# Worker de confirmações WhatsApp (YCloud).
+# verify_jwt = false: o gateway NÃO valida JWT (a anon key do projeto é
+# publishable key, não-JWT, e seria rejeitada com UNAUTHORIZED_INVALID_JWT_FORMAT).
+# A autorização é EXCLUSIVAMENTE o header x-worker-secret, comparado server-side
+# com OUTBOX_WORKER_SECRET (obrigatório). Único chamador legítimo: pg_cron.
+# A YCLOUD_API_KEY continua SOMENTE server-side via Secrets — nunca no browser.
+[functions.process-notification-outbox]
+verify_jwt = false

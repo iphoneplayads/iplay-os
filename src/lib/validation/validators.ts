@@ -1,4 +1,6 @@
 import type { AddressInput, CustomerInput, SchedulingInput } from '@/types/booking';
+import { SCHEDULING_CONFIG } from '@/config/scheduling';
+import { saoPauloNow, timeToMinutes } from '@/lib/scheduling';
 
 const onlyDigits = (v: string) => v.replace(/\D/g, '');
 
@@ -48,19 +50,47 @@ export function validateAddress(input: AddressInput): Record<string, string> {
   if (!input.neighborhood.trim()) errors.neighborhood = 'Informe o bairro.';
   if (!input.city.trim()) errors.city = 'Informe a cidade.';
   if (!input.state.trim()) errors.state = 'Informe o estado (UF).';
+  // false é resposta válida (== null cobre só null/undefined).
+  if (input.parking_free == null) errors.parking_free = 'Informe se há estacionamento sem custo.';
   return errors;
 }
 
 export function validateScheduling(input: SchedulingInput): Record<string, string> {
   const errors: Record<string, string> = {};
-  if (!input.date) errors.date = 'Escolha a data.';
-  if (!input.startTime) errors.startTime = 'Escolha o horário.';
+  if (!input.date) errors.date = 'Escolha o dia.';
+  if (!input.startTime) errors.startTime = 'Escolha uma janela de atendimento.';
+  const window = SCHEDULING_CONFIG.windows.find((w) => w.start === input.startTime);
+  if (input.startTime && !window) {
+    errors.startTime = 'Escolha uma janela válida.';
+    return errors;
+  }
+  if (input.endTime && window && input.endTime !== window.end) {
+    errors.startTime = 'Janela inválida. Escolha novamente.';
+    return errors;
+  }
   if (input.date) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const picked = new Date(`${input.date}T00:00:00`);
-    if (Number.isNaN(picked.getTime())) errors.date = 'Data inválida.';
-    else if (picked < today) errors.date = 'A data não pode ser no passado.';
+    if (Number.isNaN(picked.getTime())) {
+      errors.date = 'Data inválida.';
+      return errors;
+    }
+    if (picked < today) {
+      errors.date = 'Esse dia já passou. Escolha outro.';
+      return errors;
+    }
+    if (picked.getDay() === 0) {
+      errors.date = 'Domingos não há atendimento. Escolha outro dia.';
+      return errors;
+    }
+    // Mesmo dia: janela já iniciada é indisponível.
+    if (window) {
+      const now = saoPauloNow();
+      if (input.date === now.dateISO && timeToMinutes(window.start) <= now.minutes) {
+        errors.startTime = 'Essa janela já passou hoje. Escolha outra.';
+      }
+    }
   }
   return errors;
 }

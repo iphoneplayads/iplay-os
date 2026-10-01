@@ -17,6 +17,15 @@ export type AppointmentStatus =
 
 export type ServiceMode = 'mobile';
 
+/** Status que BLOQUEIAM uma janela (cancelados/no_show liberam). Espelha o índice parcial do banco. */
+export const APPOINTMENT_BLOCKING_STATUSES: readonly AppointmentStatus[] = [
+  'requested',
+  'pending',
+  'confirmed',
+  'in_progress',
+  'completed',
+];
+
 export type AppointmentSource = 'site' | 'whatsapp' | 'manual' | 'ai' | string;
 
 export interface Company {
@@ -115,6 +124,13 @@ export interface Price {
   service_option_id: string | null;
   price: number;
   pix_price: number | null;
+  /**
+   * Preço total no cartão. NULL em linhas antigas (fallback: `price`, sem +11%
+   * presumido). Linhas novas sempre gravam o valor efetivo (auto ou manual).
+   */
+  card_price: number | null;
+  /** Origem do cartão: false = calculado (+11% sobre o Pix); true = manual do admin. */
+  card_price_custom: boolean;
   installment_count: number | null;
   installment_price: number | null;
   active: boolean;
@@ -137,6 +153,8 @@ export interface Address {
   city: string;
   state: string;
   reference: string | null;
+  /** Técnico tem onde estacionar sem custo? NULL = não coletado (agendamentos antigos). */
+  parking_free: boolean | null;
   latitude: number | null;
   longitude: number | null;
   created_at: string;
@@ -168,6 +186,13 @@ export interface Appointment {
   /** FASE 4: protocolo público único (gerado no banco) + chave de idempotência. */
   protocol: string | null;
   idempotency_key: string | null;
+  /**
+   * Snapshot do orçamento apresentado na criação (copiado da linha de preço).
+   * Congelado: edições futuras em prices não alteram o histórico.
+   * NULL em agendamentos antigos (sem backfill inventado).
+   */
+  quoted_pix_total: number | null;
+  quoted_card_total: number | null;
   created_at: string;
   updated_at: string;
 }

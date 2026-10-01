@@ -1,0 +1,41 @@
+-- iPlay OS — agendamento server-side do worker process-notification-outbox.
+--
+-- ARQUIVO MANUAL — NÃO é migration (db push NUNCA aplica; só o operador roda,
+-- trecho a trecho, após preencher os segredos no Vault pelo Dashboard).
+-- Pré-requisitos no projeto (Supabase cloud, recursos padrão, nada inventado):
+--   extensões pg_cron + pg_net + supabase_vault (Database → Extensions).
+--
+-- AUTENTICAÇÃO FINAL: gateway com verify_jwt=false + autorização exclusiva via
+-- header x-worker-secret === OUTBOX_WORKER_SECRET (obrigatório no worker).
+-- A anon key (publishable, não-JWT) NÃO é aceita pelo gateway e NÃO é usada
+-- aqui. O segredo outbox_anon_key permanece no Vault sem utilização.
+--
+-- PASSO 1 — guardar segredo no Vault (Dashboard → Project Settings → Vault
+-- ou via SQL abaixo com o VALOR REAL no lugar do placeholder; este arquivo
+-- sai da máquina sem segredo — rode e descarte):
+--   select vault.create_secret('<OUTBOX_WORKER_SECRET>', 'outbox_worker_secret');
+--
+-- PASSO 2 — agendar (rode UMA vez; reexecutar apenas atualiza o mesmo job):
+--
+--   select cron.schedule(
+--     'process-notification-outbox',
+--     '* * * * *',
+--     $$
+--     select net.http_post(
+--       url := 'https://avliqtinhvhyrzrpgqzk.supabase.co/functions/v1/process-notification-outbox',
+--       headers := jsonb_build_object(
+--         'Content-Type', 'application/json',
+--         'x-worker-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'outbox_worker_secret' limit 1)
+--       ),
+--       body := jsonb_build_object('limit', 10)
+--     );
+--     $$
+--   );
+--
+-- OPERAÇÃO:
+--   ver jobs .... select * from cron.job;
+--   ver runs .... select * from cron.job_run_details order by start_time desc limit 20;
+--   pausar ...... select cron.unschedule('process-notification-outbox');
+-- Cada execução reclama um lote (SKIP LOCKED) + abandonados > 600s; execuções
+-- sobrepostas nunca duplicam (trava de linha). Intervalo de 1 min + lote 10
+-- cobre folga o volume de agendamentos sem workers ociosos caros.

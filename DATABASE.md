@@ -13,9 +13,9 @@ Na FASE 3 o app grava de verdade via `repositories/supabase/` quando o env selec
 | devices | company_id + client_id | unique não imposta (1 cliente → N aparelhos) |
 | services | company_id | SEM preço; unique(company,slug) |
 | service_options | company_id + service_id | warranty_months, badge (ex. MAIS ESCOLHIDA) |
-| prices | company_id + model + service + option | única fonte de preço; unique(company,model,service,option) |
+| prices | company_id + model + service + option | única fonte de preço; unique(company,model,service,option); `card_price` (total cartão, NULL=legado) + `card_price_custom` (auto +11% vs manual) |
 | addresses | company_id | lat/long nuláveis (GPS futuro) |
-| appointments | company_id | status + service_mode mobile; UTM/gclid; FKs p/ client/device/service/option/price/address; **protocol + idempotency_key únicos (FASE 4)** |
+| appointments | company_id | status + service_mode mobile; UTM/gclid; FKs p/ client/device/service/option/price/address; **protocol + idempotency_key únicos (FASE 4)**; snapshot `quoted_pix_total`/`quoted_card_total` (imutável) |
 | notification_outbox | company_id | FASE 4: type/destino/payload/status/attempts (só estrutura, sem worker) |
 | profiles | company_id | FASE 4: id (= auth.users), role admin; escrita só via SQL |
 
@@ -27,6 +27,7 @@ Na FASE 3 o app grava de verdade via `repositories/supabase/` quando o env selec
 ## Índices
 - `idx_prices_lookup(company,model,service,option) WHERE active` (leitura quente do fluxo)
 - `idx_appts_company_date`, `idx_clients_phone`, `idx_models_company_sort`
+- `uq_appts_window_active(company,date,start) WHERE status NOT IN ('cancelled','no_show')` — trava atômica anti-dupla-janela; cancelados/no_show liberam
 
 ## Integridade
 - Preço obtido por tupla (company, model, service, option); ausente → mensagem, nunca invenção.
@@ -54,3 +55,9 @@ A tabela `agendamentos` do prompt é `appointments`; campos PT mapeados:
 Regras FASE 3 aplicadas nos dois backends:
 - Dedupe de cliente por telefone (só dígitos) dentro do tenant; registro reutilizado e atualizado, nunca duplicado.
 - Preço final revalidado no banco em `appointments.service.createAppointment` antes de gravar (o `priceId` do navegador é descartado).
+
+## Janelas de atendimento (delivery; sem tabelas novas)
+- Regra em `src/config/scheduling.ts` (SEG–SÁB 09–19, 5 janelas de 2h; domingo fechado; capacidade 1).
+- Gravação em `appointments.scheduled_date` + `scheduled_start/end_time` (fim sempre preenchido).
+- Disponibilidade real: `booking.getOccupiedSlots` (mock lê memória; Supabase via RPC `get_day_availability`, só horários, sem dados de clientes).
+- Conflito: teste `WINDOW_TAKEN` na `create_booking` + índice `uq_appts_window_active`; status que bloqueiam em `APPOINTMENT_BLOCKING_STATUSES` (`types/domain.ts`).

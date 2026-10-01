@@ -14,7 +14,7 @@ export function ProgressIndicator({ current }: { current: BookingStepId }) {
               i <= idx ? 'bg-lima' : 'bg-linha',
             )}
           />
-          <p className={cn('mt-1 hidden text-[11px] sm:block', i === idx ? 'font-bold text-gelo' : 'text-cinza')}>
+          <p className={cn('mt-1 hidden text-center text-[11px] sm:block', i === idx ? 'font-bold text-gelo' : 'text-cinza')}>
             {s.label}
           </p>
         </li>

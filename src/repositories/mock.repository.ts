@@ -9,6 +9,9 @@ import type {
   ServiceOption,
 } from '@/types/domain';
 import type { CreateAppointmentInput, CreatedAppointment } from '@/types/booking';
+import { APPOINTMENT_BLOCKING_STATUSES } from '@/types/domain';
+import { WindowTakenError } from '@/lib/booking/errors';
+import { effectiveCard, effectivePix } from '@/lib/pricing';
 import { buildProtocol } from '@/lib/booking/protocol';
 import { COMPANY_ID, mockModels, mockPrices, mockServiceOptions, mockServices } from '@/data/mock/catalog';
 
@@ -33,6 +36,8 @@ export interface CatalogRepository {
 export interface BookingRepository {
   createAppointment(input: CreateAppointmentInput): Promise<CreatedAppointment>;
   listAppointments(companyId: string): Promise<Appointment[]>;
+  /** Inícios ocupados do dia (só horários; status que bloqueiam). Para a disponibilidade real. */
+  getOccupiedSlots(companyId: string, dateISO: string): Promise<Array<{ start_time: string; end_time: string }>>;
 }
 
 const memoryAppointments: Appointment[] = [];
@@ -40,6 +45,13 @@ const memoryClients: Client[] = [];
 const memoryDevices: Device[] = [];
 const memoryAddresses: Address[] = [];
 const memoryByIdempotency = new Map<string, CreatedAppointment>();
+
+/** Snapshot do orçamento (espelha a RPC: Pix ?? price; Cartão ?? price, sem +11% presumido). */
+function snapshotOf(priceId: string | null): Pick<Appointment, 'quoted_pix_total' | 'quoted_card_total'> {
+  const row = priceId ? mockPrices.find((p) => p.id === priceId) : undefined;
+  if (!row) return { quoted_pix_total: null, quoted_card_total: null };
+  return { quoted_pix_total: effectivePix(row), quoted_card_total: effectiveCard(row) };
+}
 
 /** Acesso interno ao store em memória (usado pelo admin mock; não usar na UI). */
 export function __mockStore() {
@@ -101,6 +113,16 @@ export const mockBookingRepository: BookingRepository = {
       if (hit && hit.appointment.company_id === input.companyId) return hit;
     }
     const timestamp = now();
+    // Trava anti-dupla-janela (espelha o índice parcial do banco): mesma
+    // empresa/data/início com status que bloqueia → recusa.
+    const slotTaken = memoryAppointments.some(
+      (a) =>
+        a.company_id === input.companyId &&
+        a.scheduled_date === input.scheduling.date &&
+        a.scheduled_start_time.slice(0, 5) === input.scheduling.startTime.slice(0, 5) &&
+        (APPOINTMENT_BLOCKING_STATUSES as readonly string[]).includes(a.status),
+    );
+    if (slotTaken) throw new WindowTakenError();
     // FASE 3: dedupe — reutiliza cliente existente pelo telefone (só dígitos),
     // atualizando nome/e-mail/whatsapp com os dados mais recentes. Sem duplicados.
     const phoneDigits = onlyDigits(input.client.phone);
@@ -146,7 +168,7 @@ export const mockBookingRepository: BookingRepository = {
       price_id: input.priceId,
       scheduled_date: input.scheduling.date,
       scheduled_start_time: input.scheduling.startTime,
-      scheduled_end_time: null,
+      scheduled_end_time: input.scheduling.endTime ?? null,
       status: 'requested', service_mode: 'mobile',
       address_id: addressId, notes: input.notes ?? null,
       source: input.source ?? 'site',
@@ -157,6 +179,8 @@ export const mockBookingRepository: BookingRepository = {
       utm_term: input.attribution.utm_term,
       gclid: input.attribution.gclid,
       protocol, idempotency_key: key,
+      // Snapshot do orçamento apresentado (espelha a RPC: Pix ?? price; Cartão ?? price).
+      ...snapshotOf(input.priceId),
       created_at: timestamp, updated_at: timestamp,
     };
     memoryDevices.push(device);
@@ -168,6 +192,7 @@ export const mockBookingRepository: BookingRepository = {
       number: input.address.number, complement: input.address.complement || null,
       neighborhood: input.address.neighborhood, city: input.address.city,
       state: input.address.state, reference: input.address.reference || null,
+      parking_free: input.address.parking_free ?? null,
       latitude: null, longitude: null, created_at: timestamp, updated_at: timestamp,
     };
     const result = { appointment, client: finalClient, device, address };
@@ -179,6 +204,21 @@ export const mockBookingRepository: BookingRepository = {
     assertTenant(companyId);
     await delay();
     return [...memoryAppointments].filter((a) => a.company_id === companyId);
+  },
+  async getOccupiedSlots(companyId, dateISO) {
+    assertTenant(companyId);
+    await delay(60);
+    return memoryAppointments
+      .filter(
+        (a) =>
+          a.company_id === companyId &&
+          a.scheduled_date === dateISO &&
+          (APPOINTMENT_BLOCKING_STATUSES as readonly string[]).includes(a.status),
+      )
+      .map((a) => ({
+        start_time: a.scheduled_start_time.slice(0, 5),
+        end_time: (a.scheduled_end_time ?? '').slice(0, 5),
+      }));
   },
 };
 

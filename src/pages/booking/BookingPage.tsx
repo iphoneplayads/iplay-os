@@ -3,21 +3,29 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { APP_CONFIG } from '@/config/app';
 import { AppointmentSummary } from '@/components/booking/AppointmentSummary';
 import { BookingStep, ProgressIndicator } from '@/components/booking/BookingChrome';
-import { AddressForm, CustomerForm, NotesInput, ScheduleForm } from '@/components/booking/Forms';
-import { ModelSelector } from '@/components/booking/ModelSelector';
+import { AddressForm, CustomerForm, NotesInput } from '@/components/booking/Forms';
+import { DateStrip } from '@/components/booking/DateStrip';
+import { WindowCards } from '@/components/booking/WindowCards';
+import { ModelBrowser } from '@/components/booking/ModelBrowser';
+import { OptionPriceCard } from '@/components/booking/OptionPriceCard';
 import { PriceCard } from '@/components/booking/PriceCard';
-import { ServiceOptionCard } from '@/components/booking/ServiceOptionCard';
+import { QuoteAside } from '@/components/booking/QuoteAside';
 import { ServiceSelector } from '@/components/booking/ServiceSelector';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/States';
 import { useToast } from '@/components/ui/Toast';
 import { useAttribution } from '@/hooks/useAttribution';
 import { useBookingFlow } from '@/hooks/useBookingFlow';
+import { useOptionPrices } from '@/hooks/useOptionPrices';
 import { trackEvent } from '@/lib/analytics/events';
+import { WindowTakenError } from '@/lib/booking/errors';
+import { effectivePix, effectiveCard, displayInstallment } from '@/lib/pricing';
+import { MAX_CARD_INSTALLMENTS } from '@/config/pricing';
 import { newIdempotencyKey } from '@/lib/booking/idempotency';
+import { nextCalendarDays, saoPauloNow, windowLabel } from '@/lib/scheduling';
 import { formatBRL, formatDateBR } from '@/lib/utils/format';
-import { buildBookingMessage, buildWaLink } from '@/lib/whatsapp';
-import type { CreatedAppointment } from '@/types/booking';
+import { getDayWindows, type DayWindow } from '@/services/availability.service';
+import type { BookingStepId, CreatedAppointment } from '@/types/booking';
 import {
   validateAddress,
   validateBookingSelection,
@@ -35,11 +43,81 @@ export function BookingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [notes, setNotes] = useState('');
   const [created, setCreated] = useState<CreatedAppointment | null>(null);
+  const [choosingId, setChoosingId] = useState<string | null>(null);
+
+  // Janelas de atendimento (etapa schedule).
+  const days = useMemo(() => nextCalendarDays(), []);
+  const [windows, setWindows] = useState<DayWindow[]>([]);
+  const [loadingWindows, setLoadingWindows] = useState(false);
+  const [windowsError, setWindowsError] = useState<string | null>(null);
+
+  async function loadWindows(dateISO: string) {
+    setLoadingWindows(true);
+    setWindowsError(null);
+    try {
+      setWindows(await getDayWindows(dateISO));
+    } catch (e) {
+      console.error('[booking] Falha ao carregar janelas:', e);
+      setWindowsError('Não foi possível carregar os horários. Tente novamente.');
+      setWindows([]);
+    } finally {
+      setLoadingWindows(false);
+    }
+  }
+
+  function pickDate(dateISO: string) {
+    // Trocar a data invalida a janela anterior (vale só o que continua válido).
+    flow.setScheduling({ date: dateISO, startTime: '' });
+    setFormErrors({});
+    void loadWindows(dateISO);
+  }
+
+  function pickWindow(start: string, end: string) {
+    flow.setScheduling({ date: flow.scheduling.date, startTime: start, endTime: end });
+    setFormErrors({});
+    trackEvent('schedule_selected', { date: flow.scheduling.date, window: start });
+    // Avanço automático (mesmo padrão da seleção do modelo); a próxima etapa existe.
+    if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current);
+    advanceTimer.current = window.setTimeout(() => {
+      flow.setStep('confirm');
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+    }, 220);
+  }
+
+  // Ao ENTRAR na etapa: hoje por padrão + (re)carrega ocupação real;
+  // invalida janela que deixou de ser livre sem arrastar estado inválido.
+  const prevStep = useRef(flow.step);
+  useEffect(() => {
+    const entered = prevStep.current !== 'schedule' && flow.step === 'schedule';
+    prevStep.current = flow.step;
+    if (!entered) return;
+    const date = flow.scheduling.date || saoPauloNow().dateISO;
+    if (!flow.scheduling.date) flow.setScheduling({ date, startTime: '' });
+    setLoadingWindows(true);
+    setWindowsError(null);
+    getDayWindows(date)
+      .then((w) => {
+        setWindows(w);
+        setLoadingWindows(false);
+        const current = flow.scheduling.startTime;
+        if (current && !w.some((x) => x.start === current && x.state === 'free')) {
+          flow.setScheduling({ date, startTime: '' });
+        }
+      })
+      .catch((e) => {
+        console.error('[booking] Falha ao carregar janelas:', e);
+        setWindowsError('Não foi possível carregar os horários. Tente novamente.');
+        setLoadingWindows(false);
+      });
+  });
 
   // Suporte a booking_abandoned sem leituras obsoletas no cleanup.
   const stepRef = useRef(flow.step);
   stepRef.current = flow.step;
   const createdRef = useRef<string | null>(null);
+  // Timer do avanço automático na seleção do modelo (feedback antes de avançar).
+  const advanceTimer = useRef<number | null>(null);
 
   // FASE 4 §14: uma chave por tentativa de confirmação — retries/duplo clique
   // reutilizam a mesma chave e o banco devolve o agendamento já criado.
@@ -90,6 +168,47 @@ export function BookingPage() {
     [flow.selectedModel, flow.selectedService, flow.selectedOption, flow.price],
   );
 
+  // Garantia sempre da estrutura (opção); nunca prometida quando desconhecida.
+  const warrantyLabel = useMemo(() => {
+    const months = flow.selectedOption?.warranty_months;
+    if (months == null) return null;
+    return `${months} ${months === 1 ? 'mês' : 'meses'} de garantia`;
+  }, [flow.selectedOption]);
+
+  const quote = useMemo(
+    () => ({ ...selection, warrantyLabel }),
+    [selection, warrantyLabel],
+  );
+
+  const optionPrices = useOptionPrices(
+    flow.modelId,
+    flow.serviceId,
+    flow.options,
+    flow.step === 'option',
+  );
+
+  async function chooseOption(optionId: string) {
+    if (!flow.modelId || !flow.serviceId) return;
+    setChoosingId(optionId);
+    try {
+      flow.pickOption(optionId);
+      trackEvent('service_option_selected', { serviceOptionId: optionId });
+      await flow.loadPrice(flow.modelId, flow.serviceId, optionId);
+      flow.setStep('price');
+    } finally {
+      setChoosingId(null);
+    }
+  }
+
+  function editQuoteStep(step: BookingStepId) {
+    if (step !== 'model' && step !== 'service' && step !== 'option') return;
+    if (step === 'option' && !flow.needsOption) {
+      flow.setStep('service');
+      return;
+    }
+    flow.setStep(step);
+  }
+
   const addressLine =
     flow.address.street && flow.address.number
       ? `${flow.address.street}, ${flow.address.number}${flow.address.complement ? ` — ${flow.address.complement}` : ''} · ${flow.address.neighborhood}, ${flow.address.city}/${flow.address.state} · CEP ${flow.address.zip_code}`
@@ -98,37 +217,40 @@ export function BookingPage() {
   if (flow.loading) return <LoadingState message="Carregando modelos e serviços…" />;
   if (flow.error) return <ErrorState message={flow.error} onRetry={() => window.location.reload()} />;
   if (created) {
-    const message = buildBookingMessage({
-      name: flow.customer.name,
-      protocol: created.appointment.protocol ?? created.appointment.id,
-      model: selection.model?.name ?? '—',
-      service: selection.service?.name ?? '—',
-      option: selection.option?.name ?? null,
-      value: selection.price ? formatBRL(selection.price.price) : 'a confirmar',
-      date: formatDateBR(created.appointment.scheduled_date),
-      time: created.appointment.scheduled_start_time,
-      address: addressLine || '—',
-    });
+    const pixTotal =
+      created.appointment.quoted_pix_total ??
+      (selection.price ? effectivePix(selection.price) : null);
+    const cardTotal =
+      created.appointment.quoted_card_total ??
+      (selection.price ? effectiveCard(selection.price) : null);
+    const pixLabel = pixTotal != null ? formatBRL(pixTotal) : 'a confirmar';
+    const cardLabel =
+      cardTotal != null
+        ? `${formatBRL(cardTotal)} em até ${MAX_CARD_INSTALLMENTS}x de ${formatBRL(displayInstallment(cardTotal))} sem juros`
+        : 'a confirmar';
     return (
       <div className="rounded-3xl bg-musgo p-6 text-center border border-linha">
         <p className="text-4xl text-lima">✓</p>
         <h1 className="mt-2 font-display text-2xl font-extrabold text-gelo">Atendimento solicitado!</h1>
-        <p className="mt-1 text-sm text-cinza">Sua solicitação foi registrada. A iPlay confirma em breve pelo WhatsApp.</p>
+        <p className="mt-1 text-sm text-cinza">Sua solicitação foi registrada. Você receberá a confirmação e as atualizações do atendimento pelo WhatsApp.</p>
         <dl className="mt-4 space-y-1 rounded-2xl bg-noite p-4 text-left text-sm text-nevoa">
           <div className="flex justify-between gap-2"><dt className="text-cinza">Protocolo</dt><dd className="font-mono text-xs font-semibold text-lima">{created.appointment.protocol ?? created.appointment.id}</dd></div>
           <div className="flex justify-between gap-2"><dt className="text-cinza">Aparelho</dt><dd className="font-semibold text-gelo">{selection.model?.name ?? '—'}</dd></div>
-          <div className="flex justify-between gap-2"><dt className="text-cinza">Serviço</dt><dd className="font-semibold text-gelo">{selection.service?.name ?? '—'}</dd></div>
+          <div className="flex justify-between gap-2"><dt className="text-cinza">Serviço</dt><dd className="font-semibold text-gelo">{selection.service?.name ?? '—'}{selection.option ? ` — ${selection.option.name}` : ''}</dd></div>
           <div className="flex justify-between gap-2"><dt className="text-cinza">Data</dt><dd className="font-semibold text-gelo">{formatDateBR(created.appointment.scheduled_date)}</dd></div>
-          <div className="flex justify-between gap-2"><dt className="text-cinza">Horário</dt><dd className="font-semibold text-gelo">{created.appointment.scheduled_start_time}</dd></div>
-          <div className="flex justify-between gap-2"><dt className="text-cinza">Endereço</dt><dd className="text-right font-semibold text-gelo">{addressLine || '—'}</dd></div>
+          <div className="flex justify-between gap-2"><dt className="text-cinza">Janela de atendimento</dt><dd className="font-semibold text-gelo">{created.appointment.scheduled_end_time ? windowLabel(created.appointment.scheduled_start_time.slice(0, 5), created.appointment.scheduled_end_time.slice(0, 5)) : created.appointment.scheduled_start_time}</dd></div>
+          <div className="flex justify-between gap-2"><dt className="text-cinza">Pix</dt><dd className="font-semibold text-gelo">{pixLabel}</dd></div>
+          <div className="flex justify-between gap-2"><dt className="text-cinza">Cartão</dt><dd className="text-right font-semibold text-gelo">{cardLabel}</dd></div>
         </dl>
+        <p className="mt-2 text-xs text-cinza">O atendimento será realizado dentro da janela selecionada, no endereço informado.</p>
+        <p className="mt-3 text-sm font-semibold text-gelo">iPlay — Seu iPhone em boas mãos.</p>
         <a
-          href={buildWaLink(flow.customer.phone, message)}
+          href={`https://wa.me/${APP_CONFIG.company.whatsapp}?text=${encodeURIComponent('Olá! Fiz um agendamento no site e gostaria de falar com a iPlay.')}`}
           target="_blank"
           rel="noreferrer"
-          className="mt-4 block rounded-2xl bg-[#1faa55] px-6 py-4 text-center font-bold text-white min-h-[52px]"
+          className="mt-4 block rounded-2xl border border-linha bg-noite px-6 py-3 text-center font-semibold text-gelo min-h-[52px]"
         >
-          Confirmar pelo WhatsApp
+          Falar com a iPlay via WhatsApp
         </a>
         <Button variant="secondary" fullWidth className="mt-2" onClick={() => navigate('/')}>Voltar ao início</Button>
       </div>
@@ -138,34 +260,40 @@ export function BookingPage() {
   const selErrors = validateBookingSelection({ modelId: flow.modelId, serviceId: flow.serviceId });
 
   return (
-    <div>
+    <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+      <div className="min-w-0">
       <ProgressIndicator current={flow.step} />
 
       {flow.step === 'model' && (
-        <BookingStep title="Escolha seu iPhone" hint="Etapa 1 de 8 — onde estou → escolher modelo → próximo: defeito.">
-          <ModelSelector
+        <BookingStep title="Qual é o seu iPhone?" hint="Escolha o modelo para ver os serviços disponíveis.">
+          <ModelBrowser
             models={flow.models}
             selectedId={flow.modelId}
             onSelect={(id) => {
+              if (flow.modelId && flow.modelId !== id) flow.clearServiceSelection();
               flow.setModelId(id);
               trackEvent('model_selected', { modelId: id });
+              // Avanço automático após feedback visual (~220ms). Toques
+              // repetidos reiniciam o timer; sem botão Continuar nesta etapa.
+              if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current);
+              advanceTimer.current = window.setTimeout(() => {
+                trackEvent('booking_started', { modelId: id });
+                flow.setStep('service');
+                const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+              }, 220);
             }}
           />
-          <Button
-            fullWidth className="mt-4" disabled={!flow.modelId}
-            onClick={() => { trackEvent('booking_started', { modelId: flow.modelId }); flow.setStep('service'); }}
-          >
-            Continuar
-          </Button>
         </BookingStep>
       )}
 
       {flow.step === 'service' && (
-        <BookingStep title="Qual problema?" hint="Etapa 2 — escolha o defeito.">
+        <BookingStep title="O que aconteceu com seu iPhone?" hint="Etapa 2 — escolha o problema.">
           <ServiceSelector
             services={flow.services}
             selectedId={flow.serviceId}
             onSelect={async (id) => {
+              if (flow.serviceId && flow.serviceId !== id) flow.clearOptionSelection();
               flow.setServiceId(id);
               trackEvent('service_selected', { serviceId: id });
               await flow.loadOptions(id);
@@ -177,11 +305,15 @@ export function BookingPage() {
               disabled={!flow.serviceId}
               onClick={async () => {
                 if (!flow.serviceId) return;
-                if (flow.needsOption) flow.setStep('option');
-                else {
-                  if (flow.modelId) await flow.loadPrice(flow.modelId, flow.serviceId, null);
-                  flow.setStep('price');
+                // 0 ou 1 opção: sem tela intermediária (a única é pré-selecionada).
+                if (flow.options.length > 1) {
+                  flow.setStep('option');
+                  return;
                 }
+                const single = flow.options.length === 1 ? flow.options[0].id : null;
+                if (single) flow.pickOption(single);
+                if (flow.modelId) await flow.loadPrice(flow.modelId, flow.serviceId, single);
+                flow.setStep('price');
               }}
             >
               Continuar
@@ -191,43 +323,31 @@ export function BookingPage() {
       )}
 
       {flow.step === 'option' && (
-        <BookingStep title="Escolha a solução" hint="Etapa 3 — para troca de tela: Premium, Pro ou Original Remanufaturada.">
+        <BookingStep title="Escolha a solução" hint="Etapa 3 — compare as opções com preço e garantia reais.">
           {flow.options.length === 0 ? (
             <EmptyState title="Nenhuma opção disponível" hint="Volte e escolha outro serviço." />
           ) : (
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 gap-3">
               {flow.options.map((o) => (
-                <ServiceOptionCard
+                <OptionPriceCard
                   key={o.id}
                   option={o}
-                  selected={flow.serviceOptionId === o.id}
-                  onSelect={() => {
-                    flow.pickOption(o.id);
-                    trackEvent('service_option_selected', { serviceOptionId: o.id });
-                  }}
+                  price={optionPrices.prices[o.id] ?? null}
+                  loadingPrice={optionPrices.loading}
+                  choosing={choosingId === o.id}
+                  onChoose={() => void chooseOption(o.id)}
                 />
               ))}
             </div>
           )}
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <Button variant="secondary" onClick={() => flow.setStep('service')}>Voltar</Button>
-            <Button
-              disabled={!flow.serviceOptionId}
-              onClick={async () => {
-                if (flow.modelId && flow.serviceId) {
-                  await flow.loadPrice(flow.modelId, flow.serviceId, flow.serviceOptionId);
-                }
-                flow.setStep('price');
-              }}
-            >
-              Ver preço
-            </Button>
+          <div className="mt-4">
+            <Button variant="secondary" fullWidth onClick={() => flow.setStep('service')}>Voltar</Button>
           </div>
         </BookingStep>
       )}
 
       {flow.step === 'price' && (
-        <BookingStep title="Seu orçamento" hint="Etapa 4 — confira o valor. Para alterar a escolha, volte.">
+        <BookingStep title="Seu reparo" hint="Etapa 4 — confira o valor e continue para o agendamento.">
           {flow.loadingPrice ? (
             <LoadingState message="Consultando preço…" />
           ) : (
@@ -243,15 +363,31 @@ export function BookingPage() {
                 {flow.selectedOption && (
                   <div className="flex justify-between gap-2"><dt className="text-cinza">Opção</dt><dd className="font-semibold text-gelo">{flow.selectedOption.name}</dd></div>
                 )}
+                {warrantyLabel && (
+                  <div className="flex justify-between gap-2"><dt className="text-cinza">Garantia</dt><dd className="font-semibold text-lima">{warrantyLabel}</dd></div>
+                )}
               </dl>
             </>
           )}
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <Button variant="secondary" onClick={() => flow.setStep(flow.needsOption ? 'option' : 'service')}>Voltar e alterar</Button>
-            <Button disabled={flow.priceMissing} onClick={() => flow.setStep('customer')}>Agendar atendimento</Button>
-          </div>
-          {flow.priceMissing && (
-            <p className="mt-2 text-center text-xs text-cinza">Preço ainda não cadastrado para esta combinação. Fale com a iPlay para confirmar o valor.</p>
+          {flow.priceMissing ? (
+            <>
+              <p className="mt-3 text-center text-sm font-semibold text-gelo">Preço ainda não disponível online</p>
+              <p className="mt-1 text-center text-sm text-cinza">Fale com a iPlay para consultar este serviço.</p>
+              <a
+                href={`https://wa.me/${APP_CONFIG.company.whatsapp}?text=${encodeURIComponent(`Olá! Quero consultar o valor de ${flow.selectedService?.name ?? 'um serviço'} para ${flow.selectedModel?.name ?? 'meu iPhone'}.`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 block rounded-2xl border border-linha bg-musgo px-6 py-4 text-center font-semibold text-gelo min-h-[52px]"
+              >
+                Falar no WhatsApp
+              </a>
+              <Button variant="secondary" fullWidth className="mt-2" onClick={() => flow.setStep(flow.needsOption ? 'option' : 'service')}>Voltar e alterar</Button>
+            </>
+          ) : (
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <Button variant="secondary" onClick={() => flow.setStep(flow.needsOption ? 'option' : 'service')}>Voltar e alterar</Button>
+              <Button onClick={() => flow.setStep('customer')}>Continuar para agendamento</Button>
+            </div>
           )}
         </BookingStep>
       )}
@@ -302,21 +438,46 @@ export function BookingPage() {
       )}
 
       {flow.step === 'schedule' && (
-        <BookingStep title="Data e horário" hint="Etapa 7 — escolha quando podemos ir até você.">
-          <ScheduleForm value={flow.scheduling} errors={formErrors} onChange={flow.setScheduling} />
+        <BookingStep title="Quando podemos ir até você?" hint="Escolha o melhor dia e uma janela de atendimento.">
+          <DateStrip days={days} selected={flow.scheduling.date} onSelect={pickDate} />
+          <div className="mt-4">
+            <p className="mb-2 text-sm font-bold text-gelo">Escolha uma janela</p>
+            {loadingWindows ? (
+              <LoadingState message="Consultando horários…" />
+            ) : windowsError ? (
+              <ErrorState
+                message={windowsError}
+                onRetry={() => {
+                  if (flow.scheduling.date) void loadWindows(flow.scheduling.date);
+                }}
+              />
+            ) : (
+              <WindowCards
+                windows={windows}
+                selectedStart={flow.scheduling.startTime}
+                onSelect={pickWindow}
+              />
+            )}
+          </div>
           <div className="mt-4 grid grid-cols-2 gap-2">
             <Button variant="secondary" onClick={() => flow.setStep('address')}>Voltar</Button>
             <Button
+              disabled={!flow.scheduling.startTime}
               onClick={() => {
                 const errs = validateScheduling(flow.scheduling);
                 setFormErrors(errs);
                 if (Object.keys(errs).length === 0) flow.setStep('confirm');
-                else push('Escolha data e horário.');
+                else push('Escolha dia e janela.');
               }}
             >
-              Revisar
+              Continuar
             </Button>
           </div>
+          {(formErrors.date || formErrors.startTime) && (
+            <p className="mt-2 text-sm text-red-400" role="alert">
+              {[formErrors.date, formErrors.startTime].filter(Boolean).join(' ')}
+            </p>
+          )}
         </BookingStep>
       )}
 
@@ -329,8 +490,12 @@ export function BookingPage() {
             addressLine={addressLine}
             date={flow.scheduling.date}
             time={flow.scheduling.startTime}
+            timeEnd={flow.scheduling.endTime}
             notes={notes}
           />
+          <p className="mt-2 text-xs text-cinza">
+            O atendimento será realizado dentro da janela selecionada.
+          </p>
           {Object.keys(selErrors).length > 0 && (
             <p className="mt-2 text-sm text-red-400">Faltam: {Object.values(selErrors).join(' ')}</p>
           )}
@@ -347,7 +512,7 @@ export function BookingPage() {
                     client: flow.customer,
                     deviceModelId: flow.modelId,
                     serviceId: flow.serviceId,
-                    serviceOptionId: flow.needsOption ? flow.serviceOptionId : null,
+                    serviceOptionId: flow.serviceOptionId,
                     priceId: flow.price?.id ?? null,
                     address: flow.address,
                     scheduling: flow.scheduling,
@@ -359,9 +524,14 @@ export function BookingPage() {
                   trackEvent('appointment_created', { appointmentId: result.appointment.id });
                   createdRef.current = result.appointment.id;
                   setCreated(result);
+                  // A confirmação WhatsApp é processada server-side (cron → worker).
+                  // O frontend apenas conclui o booking e exibe o sucesso.
                 } catch (e) {
                   if (e instanceof PriceNotAvailableError) {
                     push(e.message);
+                  } else if (e instanceof WindowTakenError) {
+                    push(e.message);
+                    flow.setStep('schedule');
                   } else if (e instanceof AppointmentValidationError) {
                     const mapped: Record<string, string> = {};
                     for (const err of e.errors) {
@@ -384,6 +554,10 @@ export function BookingPage() {
           </div>
         </BookingStep>
       )}
+      </div>
+      <aside className="hidden lg:block" aria-label="Resumo do orçamento">
+        <QuoteAside selection={quote} onEdit={editQuoteStep} />
+      </aside>
     </div>
   );
 }

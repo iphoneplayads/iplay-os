@@ -1,5 +1,8 @@
 /**
- * WhatsApp (FASE 4 §16): só mensagem pronta + link wa.me. Sem API, sem envio automático.
+ * WhatsApp — link wa.me (client-side apenas).
+ * O envio AUTOMÁTICO de confirmações é server-side, na Edge Function
+ * process-notification-outbox via YCloud (nunca chama a API daqui).
+ * Este módulo mantém só mensagem pronta + link para CTAs secundários.
  * O destino é o NÚMERO DO CLIENTE (nunca o da iPlay no lugar dele).
  */
 export interface BookingMessageInput {

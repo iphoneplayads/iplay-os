@@ -30,7 +30,7 @@ supabase/        # schema.sql, rls.sql, seed.sql
 ## 4. Regras respeitadas
 - Lógica de negócio em `services/`; UI só renderiza e despacha.
 - Preços NUNCA hardcoded: `getPrice(company, model, service, option)`; ausente → "Preço ainda não cadastrado."
-- `services` sem preço; preço vive em `prices`.
+- `services` sem preço; preço vive em `prices` (Pix + cartão; regra em `src/config/pricing.ts`, centavos inteiros em `src/lib/pricing.ts`).
 - Multi-tenant: `company_id` em todas as entidades; repositories validam tenant; RLS preparado.
 - Mocks isolados em `src/data/mock`, acessados só via `repositories/`.
 - Analytics só buffer (`lib/analytics/events.ts`); atribuição UTM/gclid preservada até `createAppointment`.
@@ -40,6 +40,9 @@ supabase/        # schema.sql, rls.sql, seed.sql
 → `appointments.service.validateAppointment/createAppointment` (revalida o preço no banco antes de
 gravar) → `booking` repository (dedupe de cliente por telefone, status inicial `requested`) → sucesso.
 Atribuição capturada uma vez (`useAttribution` + sessionStorage) e anexada ao appointment.
+→ Etapa de data/janela: `availability.service.getDayWindows` (config `SCHEDULING_CONFIG` + ocupação
+real via `booking.getOccupiedSlots`) → grava janela como `scheduled_start/end_time`; trava atômica
+no banco (teste `WINDOW_TAKEN` + índice único parcial).
 
 ## 6. Decisões técnicas
 - Tailwind v4 via `@tailwindcss/vite` (sem config JS).

@@ -47,6 +47,14 @@ export function Footer() {
           Conserto de iPhone. <span className="text-lima">Onde você estiver.</span>
         </p>
         <p className="mt-1">Atendimento onde você estiver. Veja o preço antes de agendar.</p>
+        <nav aria-label="Serviços" className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+          <Link to="/conserto-iphone/" className="font-semibold text-nevoa hover:text-lima hover:underline">
+            Conserto de iPhone
+          </Link>
+          <Link to="/troca-tela-iphone/" className="font-semibold text-nevoa hover:text-lima hover:underline">
+            Troca de tela de iPhone
+          </Link>
+        </nav>
       </div>
     </footer>
   );

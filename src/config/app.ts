@@ -27,7 +27,7 @@ export const BOOKING_STEPS = [
   { id: 'price', label: 'Valor' },
   { id: 'customer', label: 'Dados' },
   { id: 'address', label: 'Endereço' },
-  { id: 'schedule', label: 'Horário' },
+  { id: 'schedule', label: 'Data' },
   { id: 'confirm', label: 'Confirmar' },
 ] as const;
 

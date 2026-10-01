@@ -29,6 +29,11 @@
 - [ ] Provisionar banco (schema → rls → seed), criar primeiro admin via SQL, cadastrar preços, ativar `VITE_USE_MOCK=false`
 
 ## FASE 4.1 — Provisionamento Supabase (código pronto; ativação aguarda credenciais)
+
+## Janelas de atendimento ✅
+- [x] Migration aditiva `0003_scheduling_windows.sql` (índice único parcial + `get_day_availability` + `create_booking` com trava `WINDOW_TAKEN` e `scheduled_end_time`)
+- [x] Etapa "Quando podemos ir até você?" (faixa de dias, janelas 09–19 seg–sáb, domingo fechado, passado filtrado, ocupada desabilitada, auto-avanço, resumo + aviso de janela)
+- [x] Concorrência: teste no banco + índice parcial (cancelados/no_show liberam); idempotência e revalidação de preço preservadas
 - [x] Migrations reproduzíveis (`schema.sql` consolidado + `migrations/0002_fase4.sql` p/ base existente)
 - [x] RLS real revisado (deny anon, admin por tenant, RPCs definer) + `verify.sql` somente-leitura
 - [x] Seed idempotente (1 empresa, 27 modelos, 5 serviços, 3 opções; zero preços inventados)
@@ -36,6 +41,11 @@
 - [x] Modo real sem credenciais falha com mensagem explícita (sem mock silencioso)
 - [x] Code splitting do supabase-js; build verde; regressão 36/36
 - [ ] Humano: criar projeto Supabase → aplicar SQLs → criar admin → cadastrar preços → `VITE_USE_MOCK=false` → testes reais (ETAPAS 16–22)
+
+## Preço Pix + Cartão ✅
+- [x] Migration aditiva `0005_pricing_pix_card.sql` (sem DROP destrutivo, sem backfill; `rls.sql`/`schema.sql`/`verify.sql` sincronizados)
+- [x] `card_price` + `card_price_custom`; `price` legado espelha o cartão nos novos saves; transição `pix ?? price` / `card ?? price` sem +11% presumido
+- [x] Regra central `src/config/pricing.ts` + centavos inteiros (`src/lib/pricing.ts`); admin com auto/manual + "Usar cálculo automático"; site com Pix em destaque + cartão + 10x; snapshot congelado em appointments
 
 ## FASE 5 — Operação
 - technicians, atribuição, status do atendimento, painel do técnico.

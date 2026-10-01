@@ -1,6 +1,8 @@
 import { APP_CONFIG } from '@/config/app';
+import { SCHEDULING_CONFIG } from '@/config/scheduling';
 import type { Appointment } from '@/types/domain';
 import type { CreateAppointmentInput, CreatedAppointment } from '@/types/booking';
+import { WindowTakenError } from '@/lib/booking/errors';
 import { getSupabaseClient, missingCredentialsError } from '@/lib/supabase/client';
 import { resolveCompanyId } from './company';
 import type { BookingRepository } from '../mock.repository';
@@ -11,8 +13,12 @@ function db() {
   return client;
 }
 
-function friendly(rpcError: { message: string }): Error {
+/** Mapeia erros da RPC para erros de negócio (exportado para testes). */
+export function mapBookingRpcError(rpcError: { message: string }): Error {
   const msg = rpcError.message;
+  if (msg.includes('WINDOW_TAKEN') || msg.includes('uq_appts_window_active')) {
+    return new WindowTakenError();
+  }
   if (msg.includes('PRICE_NOT_AVAILABLE')) {
     return new Error('Preço ainda não cadastrado para esta combinação.');
   }
@@ -60,10 +66,29 @@ export const supabaseBookingRepository: BookingRepository = {
       p_utm_content: input.attribution.utm_content ?? '',
       p_utm_term: input.attribution.utm_term ?? '',
       p_gclid: input.attribution.gclid ?? '',
+      p_end_time: input.scheduling.endTime ?? null,
+      p_parking_free: input.address.parking_free ?? null,
     });
-    if (error) throw friendly(error);
+    if (error) throw mapBookingRpcError(error);
     const bundle = data as unknown as CreatedAppointment;
     return bundle;
+  },
+
+  async getOccupiedSlots(_companyId: string, dateISO: string): Promise<Array<{ start_time: string; end_time: string }>> {
+    // Leitura pública pela RPC get_day_availability (definer): só horários,
+    // nunca dados de clientes. Anon NÃO lê a tabela appointments.
+    const { data, error } = await db().rpc('get_day_availability', {
+      p_slug: APP_CONFIG.company.slug,
+      p_date: dateISO,
+      p_windows: SCHEDULING_CONFIG.windows.map((w) => ({ start: w.start, end: w.end })),
+    });
+    if (error) throw mapBookingRpcError(error);
+    const payload = data as unknown as {
+      windows?: Array<{ start_time: string; end_time: string; taken: boolean }>;
+    };
+    return (payload.windows ?? [])
+      .filter((w) => w.taken)
+      .map((w) => ({ start_time: w.start_time.slice(0, 5), end_time: w.end_time.slice(0, 5) }));
   },
 
   async listAppointments(_companyId: string): Promise<Appointment[]> {
@@ -80,3 +105,4 @@ export const supabaseBookingRepository: BookingRepository = {
     return (data ?? []) as Appointment[];
   },
 };
+

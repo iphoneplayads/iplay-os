@@ -8,6 +8,7 @@ const EMPTY_CUSTOMER: CustomerInput = { name: '', phone: '', email: '' };
 const EMPTY_ADDRESS: AddressInput = {
   zip_code: '', street: '', number: '', complement: '',
   neighborhood: '', city: '', state: '', reference: '',
+  parking_free: null,
 };
 
 export function useBookingFlow(attribution: AttributionInput) {
@@ -52,16 +53,31 @@ export function useBookingFlow(attribution: AttributionInput) {
   const selectedModel = useMemo(() => models.find((m) => m.id === modelId) ?? null, [models, modelId]);
   const selectedOption = useMemo(() => options.find((o) => o.id === serviceOptionId) ?? null, [options, serviceOptionId]);
 
-  const needsOption = useMemo(
-    () => selectedService?.slug === 'troca-de-tela' && options.length > 0,
-    [selectedService, options],
-  );
+  // Etapa de opções só quando houver ESCOLHA real (>1). Com 0 ou 1 opção,
+  // o fluxo avança direto ao preço (a única é pré-selecionada).
+  const needsOption = useMemo(() => options.length > 1, [options]);
 
   const loadOptions = useCallback(async (svcId: string) => {
     const opts = await getServiceOptions(svcId);
     setOptions(opts);
     setServiceOptionId(null);
     return opts;
+  }, []);
+
+  /** Troca de serviço: limpa opção/preço (evita resíduo incompatível). */
+  const clearOptionSelection = useCallback(() => {
+    setServiceOptionId(null);
+    setPrice(null);
+    setPriceMissing(false);
+  }, []);
+
+  /** Troca de modelo: limpa serviço/opção/preço (evita resíduo incompatível). */
+  const clearServiceSelection = useCallback(() => {
+    setServiceId(null);
+    setOptions([]);
+    setServiceOptionId(null);
+    setPrice(null);
+    setPriceMissing(false);
   }, []);
 
   const loadPrice = useCallback(async (mId: string, sId: string, oId: string | null) => {
@@ -86,6 +102,7 @@ export function useBookingFlow(attribution: AttributionInput) {
     selectedModel, selectedService, selectedOption, needsOption,
     setModelId, setServiceId, setCustomer, setAddress, setScheduling,
     loadOptions, loadPrice,
+    clearServiceSelection, clearOptionSelection,
     pickOption: setServiceOptionId,
   };
 }

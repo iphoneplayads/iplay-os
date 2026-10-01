@@ -117,6 +117,14 @@ create table prices (
   service_option_id uuid references service_options(id) on delete cascade,
   price numeric(10,2) not null check (price >= 0),
   pix_price numeric(10,2),
+  -- Preço total no cartão. NULL = ainda não definido (linhas antigas usam `price`
+  -- como fallback, sem presumir +11% — ver regra de compatibilidade no código).
+  card_price numeric(10,2) check (card_price is null or card_price >= 0),
+  -- Origem do cartão (só tem significado quando card_price IS NOT NULL):
+  -- false = calculado automaticamente (+11% sobre o Pix);
+  -- true = valor definido manualmente pelo administrador.
+  -- Com card_price IS NULL a linha é LEGADA e este flag é só DEFAULT.
+  card_price_custom boolean not null default false,
   installment_count int,
   installment_price numeric(10,2),
   active boolean not null default true,
@@ -142,6 +150,8 @@ create table addresses (
   city text not null,
   state text not null,
   reference text,
+  -- Operacional: técnico tem onde estacionar sem custo? NULL = não coletado.
+  parking_free boolean,
   latitude double precision,
   longitude double precision,
   created_at timestamptz not null default now(),
@@ -172,6 +182,11 @@ create table appointments (
   -- FASE 4: protocolo público único (gerado no banco) + idempotência de criação.
   protocol text,
   idempotency_key text,
+  -- Snapshot do orçamento apresentado na criação: congelado aqui para que
+  -- edições futuras em prices não alterem o histórico. NULL em agendamentos
+  -- antigos (sem backfill inventado).
+  quoted_pix_total numeric(10,2) check (quoted_pix_total is null or quoted_pix_total >= 0),
+  quoted_card_total numeric(10,2) check (quoted_card_total is null or quoted_card_total >= 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (protocol),
@@ -180,6 +195,11 @@ create table appointments (
 create index idx_appts_company_date on appointments(company_id, scheduled_date);
 create index idx_appts_client on appointments(company_id, client_id);
 create index idx_appts_protocol on appointments(company_id, protocol);
+-- Trava atômica anti-dupla-janela: uma janela (empresa/data/início) só pode ter
+-- um agendamento com status que bloqueia. Cancelados/no_show liberam a janela.
+create unique index uq_appts_window_active
+  on appointments (company_id, scheduled_date, scheduled_start_time)
+  where (status not in ('cancelled', 'no_show'));
 
 -- FK circular addresses.appointment_id -> appointments.id (adicionada após criar appointments)
 alter table addresses

@@ -1,6 +1,9 @@
 import { SERVICE_MODE_LABEL } from '@/config/app';
 import type { BookingSelection } from '@/types/booking';
 import { formatBRL, formatDateBR } from '@/lib/utils/format';
+import { displayInstallment, effectiveCard, effectivePix } from '@/lib/pricing';
+import { MAX_CARD_INSTALLMENTS } from '@/config/pricing';
+import { windowLabel } from '@/lib/scheduling';
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -18,6 +21,7 @@ export function AppointmentSummary({
   addressLine,
   date,
   time,
+  timeEnd,
   notes,
 }: {
   selection: BookingSelection;
@@ -26,6 +30,8 @@ export function AppointmentSummary({
   addressLine?: string;
   date: string;
   time: string;
+  /** Fim da janela — quando presente, "Quando" vira janela ("09h às 11h"). */
+  timeEnd?: string;
   notes?: string;
 }) {
   return (
@@ -36,14 +42,20 @@ export function AppointmentSummary({
         <Row label="Serviço" value={selection.service?.name ?? '—'} />
         {selection.option && <Row label="Opção" value={selection.option.name} />}
         <Row
-          label="Valor"
-          value={selection.price ? formatBRL(selection.price.price) : 'Preço ainda não cadastrado.'}
+          label="Pix"
+          value={selection.price ? formatBRL(effectivePix(selection.price)) : 'Preço ainda não cadastrado.'}
         />
+        {selection.price && (
+          <Row
+            label="Cartão"
+            value={`${formatBRL(effectiveCard(selection.price))} · até ${MAX_CARD_INSTALLMENTS}x de ${formatBRL(displayInstallment(effectiveCard(selection.price)))}`}
+          />
+        )}
         <Row label="Atendimento" value={`${SERVICE_MODE_LABEL.mobile} · Nós vamos até você.`} />
         <Row label="Cliente" value={customerName || '—'} />
         {phone != null && phone !== '' && <Row label="WhatsApp" value={phone} />}
         {addressLine != null && addressLine !== '' && <Row label="Endereço" value={addressLine} />}
-        <Row label="Quando" value={`${formatDateBR(date) || '—'} ${time || ''}`} />
+        <Row label="Quando" value={`${formatDateBR(date) || '—'}${timeEnd ? ` · ${windowLabel(time, timeEnd)}` : time ? ` · ${time}` : ''}`} />
         {notes != null && notes.trim() !== '' && <Row label="Observações" value={notes.trim()} />}
       </dl>
     </div>

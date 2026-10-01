@@ -9,7 +9,8 @@ export type AnalyticsEventName =
   | 'customer_data_completed'
   | 'address_completed'
   | 'appointment_created'
-  | 'booking_abandoned';
+  | 'booking_abandoned'
+  | 'schedule_selected';
 
 export interface AnalyticsEvent {
   name: AnalyticsEventName;

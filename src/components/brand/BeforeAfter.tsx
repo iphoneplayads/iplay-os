@@ -106,7 +106,9 @@ export function BeforeAfter({ beforeSrc, afterSrc }: { beforeSrc?: string; after
           <>
             {/* base: SEM iPlay — mesmo enquadramento do overlay (object-cover +
                 mesma caixa = alinhamento garantido; sem scale/distortion) */}
-            <img src={beforeSrc} alt="iPhone com tela quebrada" draggable={false} loading="eager" decoding="async" className="absolute inset-0 h-full w-full rounded-3xl object-cover [filter:drop-shadow(0_30px_45px_rgba(0,0,0,0.55))]" style={{ objectPosition: '50% 50%' }} />
+            {/* PNG intencional (SEO FASE 1): os .webp em /public/brand são bytes
+                PNG renomeados (sem economia, MIME errado) — conversão real pendente. */}
+            <img src={beforeSrc} alt="iPhone com tela quebrada" draggable={false} loading="eager" fetchPriority="high" decoding="async" className="absolute inset-0 h-full w-full rounded-3xl object-cover [filter:drop-shadow(0_30px_45px_rgba(0,0,0,0.55))]" style={{ objectPosition: '50% 50%' }} />
             {/* overlay: COM iPlay (recortado pela posição do slider) */}
             <div className="absolute inset-0" style={{ clipPath: `inset(0 0 0 ${pos}%)` }}>
               <img src={afterSrc} alt="iPhone com tela perfeita" draggable={false} loading="eager" decoding="async" className="absolute inset-0 h-full w-full rounded-3xl object-cover [filter:drop-shadow(0_30px_45px_rgba(0,0,0,0.55))]" style={{ objectPosition: '50% 50%' }} />

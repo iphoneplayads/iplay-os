@@ -37,11 +37,16 @@ export interface AddressInput {
   city: string;
   state: string;
   reference: string;
+  /** Técnico tem onde estacionar sem custo. null = ainda não respondido (bloqueia continuar no fluxo novo). */
+  parking_free: boolean | null;
 }
 
 export interface SchedulingInput {
   date: string;
+  /** Início da janela (HH:MM) — sempre um dos inícios de SCHEDULING_CONFIG.windows. */
   startTime: string;
+  /** Fim da janela (HH:MM) — preenchido ao escolher a janela. */
+  endTime?: string;
 }
 
 export interface AttributionInput {

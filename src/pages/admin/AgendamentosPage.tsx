@@ -115,6 +115,8 @@ export function AdminAgendamentos() {
           {filtered.map((r) => {
             const a = r.appointment;
             const nexts = ALLOWED_TRANSITIONS[a.status] ?? [];
+            // Histórico prioriza o snapshot congelado; fallback legado.
+            const shownValue = r.quotedCardTotal ?? r.priceValue;
             return (
               <li key={a.id} className="rounded-2xl bg-musgo p-4 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -136,7 +138,7 @@ export function AdminAgendamentos() {
                   <div className="flex justify-between gap-2"><dt className="text-cinza">Cliente</dt><dd className="font-semibold text-gelo">{r.clientName} · {r.clientPhone}</dd></div>
                   <div className="flex justify-between gap-2"><dt className="text-cinza">Aparelho</dt><dd className="font-semibold text-gelo">{r.modelName}</dd></div>
                   <div className="flex justify-between gap-2"><dt className="text-cinza">Serviço</dt><dd className="font-semibold text-gelo">{r.serviceName}{r.optionName ? ` · ${r.optionName}` : ''}</dd></div>
-                  <div className="flex justify-between gap-2"><dt className="text-cinza">Valor</dt><dd className="font-semibold text-gelo">{r.priceValue != null ? formatBRL(r.priceValue) : '—'}</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-cinza">Valor</dt><dd className="font-semibold text-gelo">{shownValue != null ? formatBRL(shownValue) : '—'}</dd></div>
                   <div className="flex justify-between gap-2"><dt className="text-cinza">Quando</dt><dd className="font-semibold text-gelo">{formatDateBR(a.scheduled_date)} às {a.scheduled_start_time}</dd></div>
                   {r.addressLine !== '' && <div className="flex justify-between gap-2"><dt className="text-cinza">Endereço</dt><dd className="text-right font-semibold text-gelo">{r.addressLine}</dd></div>}
                   {a.notes && <div className="flex justify-between gap-2"><dt className="text-cinza">Obs.</dt><dd className="text-right font-semibold text-gelo">{a.notes}</dd></div>}

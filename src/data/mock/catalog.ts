@@ -96,6 +96,9 @@ function priceRow(
     id, company_id: COMPANY_ID, model_id: modelId, service_id: serviceId,
     service_option_id: optionId, price,
     pix_price: Math.round(price * 0.95 * 100) / 100,
+    // Mock legado: sem cartão definido → fallback usa `price` (sem +11% presumido).
+    card_price: null,
+    card_price_custom: false,
     installment_count: installmentCount, installment_price,
     active: true, valid_from: null, valid_until: null,
     created_at: ts, updated_at: ts,

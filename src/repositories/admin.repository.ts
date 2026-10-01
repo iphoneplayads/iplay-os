@@ -7,6 +7,7 @@ import type {
   ServiceOption,
 } from '@/types/domain';
 import { canTransition, InvalidTransitionError } from '@/lib/booking/transitions';
+import { displayInstallment, resolvePriceSave } from '@/lib/pricing';
 import { __mockStore } from './mock.repository';
 import { mockModels, mockPrices, mockServiceOptions, mockServices } from '@/data/mock/catalog';
 import { resolveCompanyId, supa, toFriendlyError } from './supabase/company';
@@ -19,7 +20,10 @@ export interface DetailedAppointment {
   modelName: string;
   serviceName: string;
   optionName: string | null;
+  /** Valor exibido no histórico: snapshot congelado, com fallback legado. */
   priceValue: number | null;
+  quotedPixTotal: number | null;
+  quotedCardTotal: number | null;
   addressLine: string;
 }
 
@@ -40,8 +44,12 @@ export interface PriceInput {
   modelId: string;
   serviceId: string;
   serviceOptionId: string | null;
+  /** Legado: tratado como Pix quando pixValue ausente (compat). UI nova envia pixValue. */
   value: number;
   pixValue?: number | null;
+  /** Número = cartão manual; undefined/null = automático (ou manter); cardAuto força recálculo. */
+  cardPrice?: number | null;
+  cardAuto?: boolean;
   installmentCount?: number | null;
   installmentPrice?: number | null;
   active?: boolean;
@@ -50,6 +58,8 @@ export interface PriceInput {
 export interface PricePatch {
   value?: number;
   pixValue?: number | null;
+  cardPrice?: number | null;
+  cardAuto?: boolean;
   installmentCount?: number | null;
   installmentPrice?: number | null;
   active?: boolean;
@@ -154,7 +164,9 @@ export const mockAdminRepository: AdminRepository = {
         modelName: model?.name ?? '—',
         serviceName: service?.name ?? '—',
         optionName: option?.name ?? null,
-        priceValue: price ? Number(price.price) : null,
+        priceValue: appointment.quoted_card_total ?? (price ? Number(price.price) : null),
+        quotedPixTotal: appointment.quoted_pix_total,
+        quotedCardTotal: appointment.quoted_card_total,
         addressLine: address ? addressLineOf(address) : '',
       };
     });
@@ -256,16 +268,25 @@ export const mockAdminRepository: AdminRepository = {
     ) {
       throw new Error('Já existe preço para esta combinação. Edite o existente.');
     }
+    // Novo fluxo: `value` (legado) vale como Pix quando pixValue ausente.
+    const pix = input.pixValue ?? input.value;
+    if (!(pix > 0)) throw new Error('Informe um preço Pix válido maior que zero.');
+    if (input.cardPrice !== undefined && input.cardPrice !== null && !(input.cardPrice > 0)) {
+      throw new Error('Informe um preço de cartão válido maior que zero.');
+    }
+    const resolved = resolvePriceSave({ pix, cardPrice: input.cardPrice, cardAuto: input.cardAuto });
     const timestamp = now();
     const installmentCount = input.installmentCount ?? 10;
     const price: Price = {
       id: uid('price'), company_id: companyId,
       model_id: input.modelId, service_id: input.serviceId,
       service_option_id: input.serviceOptionId,
-      price: Math.round(input.value * 100) / 100,
-      pix_price: input.pixValue ?? null,
+      price: resolved.card,
+      pix_price: pix,
+      card_price: resolved.card,
+      card_price_custom: resolved.custom,
       installment_count: installmentCount,
-      installment_price: input.installmentPrice ?? Math.round((input.value / installmentCount) * 100) / 100,
+      installment_price: input.installmentPrice ?? displayInstallment(resolved.card, installmentCount),
       active: input.active ?? true,
       valid_from: null, valid_until: null,
       created_at: timestamp, updated_at: timestamp,
@@ -277,11 +298,27 @@ export const mockAdminRepository: AdminRepository = {
   async updatePrice(companyId, id, input) {
     const price = mockPrices.find((p) => p.company_id === companyId && p.id === id);
     if (!price) throw new Error('Preço não encontrado.');
-    if (input.value !== undefined) {
-      if (!(input.value > 0)) throw new Error('Informe um preço válido maior que zero.');
-      price.price = Math.round(input.value * 100) / 100;
+    const pixTouched = input.pixValue !== undefined || input.value !== undefined;
+    const nextPix = input.pixValue ?? input.value ?? price.pix_price ?? price.price;
+    if (pixTouched && !(nextPix > 0)) throw new Error('Informe um preço Pix válido maior que zero.');
+    if (input.cardPrice !== undefined && input.cardPrice !== null && !(input.cardPrice > 0)) {
+      throw new Error('Informe um preço de cartão válido maior que zero.');
     }
-    if (input.pixValue !== undefined) price.pix_price = input.pixValue;
+    const priceTouched = pixTouched || input.cardPrice !== undefined || input.cardAuto === true;
+    if (pixTouched) price.pix_price = nextPix;
+    if (priceTouched) {
+      const resolved = resolvePriceSave({
+        pix: nextPix,
+        cardPrice: input.cardPrice,
+        cardAuto: input.cardAuto,
+        currentCustom: price.card_price_custom,
+        currentCard: price.card_price,
+      });
+      price.card_price = resolved.card;
+      price.card_price_custom = resolved.custom;
+      price.price = resolved.card;
+      price.installment_price = input.installmentPrice ?? displayInstallment(resolved.card, price.installment_count ?? 10);
+    }
     if (input.installmentCount !== undefined) price.installment_count = input.installmentCount;
     if (input.installmentPrice !== undefined) price.installment_price = input.installmentPrice;
     if (input.active !== undefined) price.active = input.active;
@@ -386,7 +423,9 @@ export const supabaseAdminRepository: AdminRepository = {
         optionName: appointment.service_option_id
           ? (mOptions.get(appointment.service_option_id)?.name ?? '—')
           : null,
-        priceValue: appointment.price_id ? Number(mPrices.get(appointment.price_id)?.price ?? NaN) || null : null,
+        priceValue: appointment.quoted_card_total ?? (appointment.price_id ? Number(mPrices.get(appointment.price_id)?.price ?? NaN) || null : null),
+        quotedPixTotal: appointment.quoted_pix_total,
+        quotedCardTotal: appointment.quoted_card_total,
         addressLine: address ? addressLineOf(address) : '',
       };
     });
@@ -505,18 +544,25 @@ export const supabaseAdminRepository: AdminRepository = {
   async createPrice(_companyId, input) {
     const database = supa();
     const companyId = await resolveCompanyId();
-    if (!(input.value > 0)) throw new Error('Informe um preço válido maior que zero.');
+    const pix = input.pixValue ?? input.value;
+    if (!(pix > 0)) throw new Error('Informe um preço Pix válido maior que zero.');
+    if (input.cardPrice !== undefined && input.cardPrice !== null && !(input.cardPrice > 0)) {
+      throw new Error('Informe um preço de cartão válido maior que zero.');
+    }
+    const resolved = resolvePriceSave({ pix, cardPrice: input.cardPrice, cardAuto: input.cardAuto });
     const installmentCount = input.installmentCount ?? 10;
     const { data, error } = await database
       .from('prices')
       .insert({
         company_id: companyId, model_id: input.modelId, service_id: input.serviceId,
         service_option_id: input.serviceOptionId,
-        price: Math.round(input.value * 100) / 100,
-        pix_price: input.pixValue ?? null,
+        price: resolved.card,
+        pix_price: pix,
+        card_price: resolved.card,
+        card_price_custom: resolved.custom,
         installment_count: installmentCount,
         installment_price:
-          input.installmentPrice ?? Math.round((input.value / installmentCount) * 100) / 100,
+          input.installmentPrice ?? displayInstallment(resolved.card, installmentCount),
         active: input.active ?? true,
       })
       .select()
@@ -529,11 +575,37 @@ export const supabaseAdminRepository: AdminRepository = {
     const database = supa();
     const companyId = await resolveCompanyId();
     const patch: Record<string, unknown> = {};
-    if (input.value !== undefined) {
-      if (!(input.value > 0)) throw new Error('Informe um preço válido maior que zero.');
-      patch.price = Math.round(input.value * 100) / 100;
+    const pixTouched = input.pixValue !== undefined || input.value !== undefined;
+    const priceTouched = pixTouched || input.cardPrice !== undefined || input.cardAuto === true;
+    if (priceTouched) {
+      // Lê a linha atual para preservar cartão personalizado quando só o Pix muda.
+      const { data: current, error: fetchError } = await database
+        .from('prices')
+        .select('pix_price, price, card_price, card_price_custom, installment_count')
+        .eq('company_id', companyId)
+        .eq('id', id)
+        .single();
+      if (fetchError || !current) throw toFriendlyError(fetchError ?? { code: '', message: 'not found' }, 'Preço não encontrado.');
+      const row = current as { pix_price: number | null; price: number; card_price: number | null; card_price_custom: boolean; installment_count: number | null };
+      const nextPix = input.pixValue ?? input.value ?? row.pix_price ?? row.price;
+      if (!(nextPix > 0)) throw new Error('Informe um preço Pix válido maior que zero.');
+      if (input.cardPrice !== undefined && input.cardPrice !== null && !(input.cardPrice > 0)) {
+        throw new Error('Informe um preço de cartão válido maior que zero.');
+      }
+      const resolved = resolvePriceSave({
+        pix: nextPix,
+        cardPrice: input.cardPrice,
+        cardAuto: input.cardAuto,
+        currentCustom: row.card_price_custom,
+        currentCard: row.card_price,
+      });
+      patch.pix_price = nextPix;
+      patch.card_price = resolved.card;
+      patch.card_price_custom = resolved.custom;
+      patch.price = resolved.card;
+      patch.installment_price =
+        input.installmentPrice ?? displayInstallment(resolved.card, row.installment_count ?? 10);
     }
-    if (input.pixValue !== undefined) patch.pix_price = input.pixValue;
     if (input.installmentCount !== undefined) patch.installment_count = input.installmentCount;
     if (input.installmentPrice !== undefined) patch.installment_price = input.installmentPrice;
     if (input.active !== undefined) patch.active = input.active;
