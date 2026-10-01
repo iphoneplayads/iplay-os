@@ -1,0 +1,17 @@
+# iPlay — SPA fallback para Hostinger (Apache).
+# Prioridade:
+# 1. Arquivo físico existente -> serve direto (assets, sitemap.xml, robots.txt).
+# 2. Diretório físico existente -> serve direto (landings SEO prerenderizadas
+#    como /troca-tela-iphone/ -> /troca-tela-iphone/index.html via DirectoryIndex).
+# 3. Demais rotas client-side (/agendar, /admin/*, etc.) -> rewrite INTERNO
+#    para /index.html (sem 301/302, preserva a URL no navegador).
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  RewriteRule ^ index.html [L]
+</IfModule>
