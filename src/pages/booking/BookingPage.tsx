@@ -436,6 +436,12 @@ export function BookingPage() {
                 subtitle={flow.selectedService?.slug === SERVICE_SLUGS.battery ? 'Homologada pela ANATEL · 6 meses de garantia' : (flow.selectedOption?.name ?? '')}
                 price={flow.price}
               />
+              {selectedFilm && flow.price && (
+                <div className="mt-3 rounded-2xl border border-lima/30 bg-musgo p-4 text-sm">
+                  <div className="flex justify-between gap-3"><span className="text-cinza">Reparo + película no PIX</span><strong className="text-lima">{formatBRL(effectivePix(flow.price) + selectedFilmPrice)}</strong></div>
+                  <div className="mt-1 flex justify-between gap-3"><span className="text-cinza">Reparo + película no cartão</span><strong className="text-gelo">{MAX_CARD_INSTALLMENTS}x de {formatBRL(displayInstallment(effectiveCard(flow.price) + selectedFilmPrice))}</strong></div>
+                </div>
+              )}
               {selectedFilm && (
                 <div className="mt-3 flex items-center justify-between rounded-2xl border border-linha bg-musgo px-4 py-3 text-sm">
                   <span className="text-cinza">Película selecionada</span>
@@ -582,6 +588,8 @@ export function BookingPage() {
             time={flow.scheduling.startTime}
             timeEnd={flow.scheduling.endTime}
             notes={notes}
+            addonName={selectedFilm ? `Película ${selectedFilm}` : null}
+            addonPrice={selectedFilmPrice}
           />
           <p className="mt-2 text-xs text-cinza">
             O atendimento será realizado dentro da janela selecionada.
