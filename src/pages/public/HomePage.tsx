@@ -109,10 +109,6 @@ export function HomePage() {
             <p className="mt-4 max-w-xl text-lg leading-snug text-nevoa">
               Escolha o modelo, veja o preço antes de agendar e deixe o resto com a iPlay.
             </p>
-            <a href="https://www.instagram.com/iplay.rio/" target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-nevoa transition hover:text-lima">
-              <span aria-hidden="true" className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-cinza text-[10px] font-black">IG</span>
-              @iplay.rio
-            </a>
             <div className="mt-5 flex flex-col gap-2 sm:flex-row">
               <Link
                 to="/agendar"
@@ -315,6 +311,13 @@ export function HomePage() {
               count={SOCIAL_PROOF.googleReviewCount}
               url={SOCIAL_PROOF.googleReviewsUrl}
             />
+            <div className="mt-5 border-t border-linha pt-4">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-cinza">Instagram</p>
+              <a href="https://www.instagram.com/iplay.rio/" target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-2 whitespace-nowrap text-base font-bold text-gelo transition hover:text-lima">
+                <span aria-hidden="true" className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-cinza text-[10px] font-black">IG</span>
+                @iplay.rio
+              </a>
+            </div>
           </div>
           <ul className="rounded-3xl border border-linha bg-musgo px-6 py-2 sm:px-8">
             {BENEFIT_ROWS.map(({ text, desc, Icon }) => (
