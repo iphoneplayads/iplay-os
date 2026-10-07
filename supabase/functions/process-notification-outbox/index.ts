@@ -44,6 +44,8 @@ declare const Deno: {
 import {
   buildConfirmationText,
   buildTemplateParams,
+  buildReviewRequestText,
+  buildReviewTemplateParams,
   decideSendMode,
   firstNameOf,
   formatDateBR,
@@ -68,6 +70,9 @@ interface WorkerEnv {
   YCLOUD_WHATSAPP_FROM?: string;
   YCLOUD_BOOKING_TEMPLATE_NAME?: string;
   YCLOUD_BOOKING_TEMPLATE_LANG?: string;
+  YCLOUD_REVIEW_TEMPLATE_NAME?: string;
+  YCLOUD_REVIEW_TEMPLATE_LANG?: string;
+  GOOGLE_REVIEW_URL?: string;
   YCLOUD_ALLOW_FREE_TEXT?: string;
   OUTBOX_WORKER_SECRET?: string;
 }
@@ -92,6 +97,7 @@ interface OutboxRow {
   id: string;
   company_id: string;
   appointment_id: string | null;
+  service_order_id?: string | null;
   type: string;
   destino: string;
   payload: Record<string, unknown>;
@@ -196,6 +202,7 @@ async function claimBatch(
   db: DbClient,
   limit: number,
   outboxId: string | null,
+  types: string[],
 ): Promise<{ jobs: OutboxRow[]; via: 'rpc' | 'legacy' }> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const client = db as any;
@@ -377,6 +384,10 @@ export async function handleWorkerRequest(req: Request, env: WorkerEnv): Promise
   const mode = decided.mode;
   const templateName = env.YCLOUD_BOOKING_TEMPLATE_NAME || DEFAULT_TEMPLATE_NAME;
   const templateLang = env.YCLOUD_BOOKING_TEMPLATE_LANG || 'pt_BR';
+  const reviewUrl = env.GOOGLE_REVIEW_URL?.trim() || '';
+  const enabledTypes = reviewUrl
+    ? ['booking_confirmation', 'google_review_request']
+    : ['booking_confirmation'];
 
   // @ts-ignore import Deno-only (resolvido via esm.sh no deploy; fora do typecheck local)
   const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
@@ -385,7 +396,7 @@ export async function handleWorkerRequest(req: Request, env: WorkerEnv): Promise
   let jobs: OutboxRow[];
   let via: string;
   try {
-    const claimed = await claimBatch(db, limit, onlyId);
+    const claimed = await claimBatch(db, limit, onlyId, enabledTypes);
     jobs = claimed.jobs;
     via = claimed.via;
   } catch {
@@ -419,6 +430,76 @@ export async function handleWorkerRequest(req: Request, env: WorkerEnv): Promise
 
   for (const job of jobs) {
     try {
+      // Pós-venda: só entra no claim quando GOOGLE_REVIEW_URL está configurada.
+      // scheduled_for é respeitado pela RPC do banco, portanto nunca envia antes dos 4 dias.
+      if (job.type === 'google_review_request') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const client = db as any;
+        if (!job.service_order_id) {
+          await finish(job, { status: 'failed', error_message: 'SERVICE_ORDER_MISSING' }, 'failed');
+          continue;
+        }
+        const { data: order } = await client
+          .from('service_orders')
+          .select('id,company_id,client_id,order_number,status')
+          .eq('id', job.service_order_id)
+          .maybeSingle();
+        if (!order || order.status !== 'completed') {
+          await finish(job, { status: 'failed', error_message: 'SERVICE_ORDER_NOT_COMPLETED' }, 'failed');
+          continue;
+        }
+        const { data: reviewClient } = await client
+          .from('clients')
+          .select('id,name,phone,whatsapp')
+          .eq('id', order.client_id)
+          .maybeSingle();
+        const rawPhone: string = job.destino || reviewClient?.whatsapp || reviewClient?.phone || '';
+        const phone = normalizeBRPhoneToE164(rawPhone);
+        if (!phone.ok || !phone.e164) {
+          await finish(job, { status: 'failed', error_message: 'PHONE_INVALID' }, 'failed');
+          continue;
+        }
+        const reviewData = {
+          firstName: firstNameOf(reviewClient?.name ?? 'cliente'),
+          orderNumber: `OS-${String(order.order_number).padStart(6, '0')}`,
+          reviewUrl,
+        };
+        const reviewTemplateName = env.YCLOUD_REVIEW_TEMPLATE_NAME || 'iplay_google_review_request';
+        const reviewTemplateLang = env.YCLOUD_REVIEW_TEMPLATE_LANG || 'pt_BR';
+        const send = mode === 'text'
+          ? await ycloudSend({
+              apiKey: YCLOUD_API_KEY,
+              from: YCLOUD_WHATSAPP_FROM as string,
+              to: phone.e164,
+              externalId: job.id,
+              mode: 'text',
+              textBody: buildReviewRequestText(reviewData),
+            })
+          : await ycloudSend({
+              apiKey: YCLOUD_API_KEY,
+              from: YCLOUD_WHATSAPP_FROM as string,
+              to: phone.e164,
+              externalId: job.id,
+              mode: 'template',
+              templateName: reviewTemplateName,
+              templateLang: reviewTemplateLang,
+              templateParams: buildReviewTemplateParams(reviewData),
+            });
+        if (send.ok) {
+          await finish(job, {
+            status: 'sent',
+            sent_at: new Date().toISOString(),
+            error_message: null,
+            provider_message_id: send.providerId ?? null,
+            provider_wamid: send.wamid ?? null,
+          }, 'sent');
+        } else {
+          const decided2 = resolveFailure(job.attempts, send.status);
+          await finish(job, { status: decided2.status, error_message: sanitizeError(send.status, send.raw) }, decided2.result);
+        }
+        continue;
+      }
+
       if (!job.appointment_id) {
         await finish(job, { status: 'failed', error_message: 'APPOINTMENT_MISSING' }, 'failed');
         continue;
@@ -546,6 +627,9 @@ if (typeof Deno !== 'undefined' && typeof Deno.serve === 'function') {
       YCLOUD_WHATSAPP_FROM: Deno.env.get('YCLOUD_WHATSAPP_FROM'),
       YCLOUD_BOOKING_TEMPLATE_NAME: Deno.env.get('YCLOUD_BOOKING_TEMPLATE_NAME'),
       YCLOUD_BOOKING_TEMPLATE_LANG: Deno.env.get('YCLOUD_BOOKING_TEMPLATE_LANG'),
+      YCLOUD_REVIEW_TEMPLATE_NAME: Deno.env.get('YCLOUD_REVIEW_TEMPLATE_NAME'),
+      YCLOUD_REVIEW_TEMPLATE_LANG: Deno.env.get('YCLOUD_REVIEW_TEMPLATE_LANG'),
+      GOOGLE_REVIEW_URL: Deno.env.get('GOOGLE_REVIEW_URL'),
       YCLOUD_ALLOW_FREE_TEXT: Deno.env.get('YCLOUD_ALLOW_FREE_TEXT'),
       OUTBOX_WORKER_SECRET: Deno.env.get('OUTBOX_WORKER_SECRET'),
     }),
