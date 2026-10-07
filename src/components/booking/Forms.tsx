@@ -17,6 +17,7 @@ export function CustomerForm({
       <Input label="Nome" name="name" value={value.name} error={errors.name} onChange={(e) => onChange({ ...value, name: e.target.value })} placeholder="Seu nome" autoComplete="name" />
       <Input label="WhatsApp / Telefone" name="phone" value={value.phone} error={errors.phone} onChange={(e) => onChange({ ...value, phone: e.target.value })} placeholder="(11) 99999-9999" inputMode="tel" autoComplete="tel" />
       <Input label="E-mail (opcional)" name="email" value={value.email} error={errors.email} onChange={(e) => onChange({ ...value, email: e.target.value })} placeholder="voce@email.com" inputMode="email" autoComplete="email" />
+      <Input label="CPF" name="cpf" value={value.cpf} error={errors.cpf} onChange={(e) => onChange({ ...value, cpf: e.target.value })} placeholder="000.000.000-00" inputMode="numeric" autoComplete="off" />
     </div>
   );
 }
