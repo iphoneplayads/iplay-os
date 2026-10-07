@@ -46,7 +46,7 @@ export function ServiceSelector({
             )}>
               <Icon />
             </span>
-            <span className="block min-w-0 font-display text-[13px] font-extrabold leading-tight sm:text-sm xl:text-[15px] xl:whitespace-nowrap">{p.label}</span>
+            <span className="block min-w-0 font-display text-[13px] font-extrabold leading-tight sm:text-sm xl:text-[15px]">{p.serviceSlug === SERVICE_SLUGS.screen ? 'Tela quebrada' : p.serviceSlug === SERVICE_SLUGS.backGlass ? 'Vidro traseiro' : p.label}</span>
           </button>
         );
       })}
