@@ -31,6 +31,9 @@ export function validateCustomer(input: CustomerInput): Record<string, string> {
   if (p) errors.phone = p;
   const e = validateEmail(input.email);
   if (e) errors.email = e;
+  const cpfDigits = onlyDigits(input.cpf);
+  if (!cpfDigits) errors.cpf = 'Informe o CPF.';
+  else if (cpfDigits.length !== 11) errors.cpf = 'CPF inválido. Use 11 dígitos.';
   return errors;
 }
 
