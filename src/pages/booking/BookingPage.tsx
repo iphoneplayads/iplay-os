@@ -46,6 +46,7 @@ export function BookingPage() {
   const [choosingId, setChoosingId] = useState<string | null>(null);
   const [upsellOpen, setUpsellOpen] = useState(false);
   const [selectedFilm, setSelectedFilm] = useState<string | null>(null);
+  const [screenGuideOpen, setScreenGuideOpen] = useState(false);
   const pendingServiceOptions = useRef<Awaited<ReturnType<typeof flow.loadOptions>>>([]);
 
   // Janelas de atendimento (etapa schedule).
@@ -360,6 +361,46 @@ export function BookingPage() {
 
       {flow.step === 'option' && (
         <BookingStep title="Escolha a solução" hint="Etapa 3 — compare as opções com preço e garantia reais.">
+          <button
+            type="button"
+            onClick={() => setScreenGuideOpen(true)}
+            className="mb-4 inline-flex items-center gap-2 text-sm font-bold text-lima hover:underline"
+          >
+            Entenda a diferença entre as telas →
+          </button>
+          {screenGuideOpen && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label="Diferença entre os tipos de tela">
+              <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl border border-linha bg-musgo p-5 sm:max-w-2xl sm:rounded-3xl sm:p-7">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-lima">Guia rápido</p>
+                    <h3 className="mt-1 font-display text-2xl font-extrabold text-gelo">Qual tela escolher?</h3>
+                    <p className="mt-1 text-sm text-cinza">Compare sem sair do seu agendamento.</p>
+                  </div>
+                  <button type="button" onClick={() => setScreenGuideOpen(false)} aria-label="Fechar" className="flex h-10 w-10 flex-none items-center justify-center rounded-full border border-linha bg-noite text-xl text-gelo">×</button>
+                </div>
+                <div className="mt-5 grid gap-3">
+                  {[
+                    ['Premium', '★★★½', 'Boa qualidade', 'Cores equilibradas', 'Toque responsivo', '3 meses de garantia'],
+                    ['Pro', '★★★★', 'Qualidade superior', 'Cores vivas e brilho forte', 'Toque muito próximo ao original', '1 ano de garantia'],
+                    ['Original Remanufaturada', '★★★★★', 'Peça original remanufaturada', 'Mesma qualidade de imagem e toque do original', 'Máxima fidelidade', '1 ano de garantia'],
+                  ].map(([name, stars, a, b, c, warranty]) => (
+                    <div key={name} className="rounded-2xl border border-linha bg-noite p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="font-display text-lg font-extrabold text-gelo">{name}</p>
+                        <span className="whitespace-nowrap text-sm font-bold text-lima">{stars}</span>
+                      </div>
+                      <div className="mt-3 grid gap-1 text-sm text-nevoa sm:grid-cols-3">
+                        <span>✓ {a}</span><span>✓ {b}</span><span>✓ {c}</span>
+                      </div>
+                      <p className="mt-3 text-xs font-bold text-lima">{warranty}</p>
+                    </div>
+                  ))}
+                </div>
+                <Button fullWidth className="mt-5" onClick={() => setScreenGuideOpen(false)}>Voltar para escolher</Button>
+              </div>
+            </div>
+          )}
           {flow.options.length === 0 ? (
             <EmptyState title="Nenhuma opção disponível" hint="Volte e escolha outro serviço." />
           ) : (
@@ -390,7 +431,7 @@ export function BookingPage() {
             <>
               <PriceCard
                 title={flow.selectedService?.name ?? 'Serviço'}
-                subtitle={`${flow.selectedModel?.name ?? ''}${flow.selectedOption ? ` · ${flow.selectedOption.name}` : ''}`}
+                subtitle={flow.selectedOption?.name ?? ''}
                 price={flow.price}
               />
               {selectedFilm && (
