@@ -29,13 +29,14 @@ export function PriceCard({
     <div className="rounded-3xl bg-lima p-6 text-noite">
       <p className="text-sm font-medium text-noite/70">{title}</p>
       <p className="font-bold">{subtitle}</p>
-      <p className="mt-4 font-display text-4xl font-extrabold tracking-tight">{formatBRL(pix)} no Pix</p>
-      <p className="mt-2 text-base font-bold">
-        {formatBRL(card)} no cartão
+      <p className="mt-4 text-xs font-extrabold uppercase tracking-[0.16em] text-noite/60">No cartão</p>
+      <p className="mt-1 font-display text-4xl font-extrabold tracking-tight">
+        {MAX_CARD_INSTALLMENTS}x de {formatBRL(displayInstallment(card))}
       </p>
-      <p className="text-sm font-medium text-noite/70">
-        até {MAX_CARD_INSTALLMENTS}x de {formatBRL(displayInstallment(card))} sem juros
-      </p>
+      <p className="mt-1 text-sm font-bold text-noite/70">sem juros</p>
+      <div className="mt-4 border-t border-noite/15 pt-4">
+        <p className="text-base font-extrabold">{formatBRL(pix)} <span className="font-bold text-noite/65">com desconto no PIX</span></p>
+      </div>
     </div>
   );
 }

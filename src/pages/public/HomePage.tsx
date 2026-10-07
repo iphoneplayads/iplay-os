@@ -79,7 +79,7 @@ export function HomePage() {
     <div>
       {/* ============ HERO ============ */}
       <section
-        className="relative overflow-hidden p-8 sm:p-12 lg:p-16"
+        className="relative -mt-6 overflow-hidden px-8 pb-8 pt-5 sm:-mt-6 sm:p-12 lg:-mt-6 lg:p-16"
         style={{ background: 'radial-gradient(1100px 520px at 85% 20%, #1c3013 0, transparent 60%), radial-gradient(800px 500px at 10% 100%, #101a13 0, transparent 55%), #0A0F0D' }}
       >
         {/* glow cinematográfico atrás do aparelho + vinheta */}
@@ -93,14 +93,12 @@ export function HomePage() {
         />
         <div className="relative grid items-center gap-10 lg:grid-cols-[1.2fr_1fr] lg:gap-12">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-linha bg-noite px-3 py-1 text-xs font-bold text-gelo">
+            <p className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-linha bg-noite px-2.5 py-1 text-[11px] font-bold text-gelo sm:gap-2 sm:px-3 sm:text-xs">
               <span aria-hidden="true" className="h-2 w-2 rounded-full bg-lima" />
               Assistência técnica especializada em iPhone
             </p>
-            <h1 className="mt-5 font-display text-5xl font-extrabold leading-[1.04] tracking-tight text-gelo sm:text-6xl xl:text-7xl">
-              Seu iPhone
-              <br />
-              deu problema?
+            <h1 className="mt-4 font-display text-5xl font-extrabold leading-[0.94] tracking-tight text-gelo sm:mt-5 sm:text-6xl sm:leading-[1.04] xl:text-7xl">
+              Seu iPhone quebrou?
               <br />
               <span className="text-lima">
                 A gente resolve
@@ -108,10 +106,10 @@ export function HomePage() {
                 onde você estiver.*
               </span>
             </h1>
-            <p className="mt-4 max-w-xl text-lg text-nevoa">
+            <p className="mt-4 max-w-xl text-lg leading-snug text-nevoa">
               Escolha o modelo, veja o preço antes de agendar e deixe o resto com a iPlay.
             </p>
-            <div className="mt-7 flex flex-col gap-2 sm:flex-row">
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
               <Link
                 to="/agendar"
                 onClick={() => trackEvent('booking_started', { entry: 'home_cta' })}
@@ -124,21 +122,21 @@ export function HomePage() {
                 href={WA_LINK}
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Tenho dúvidas — conversar no WhatsApp"
+                aria-label="Falar no WhatsApp"
                 className="flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border border-linha bg-noite px-7 py-4 text-center text-base font-semibold text-white transition hover:border-cinza sm:text-lg"
               >
                 <WhatsAppIcon className="h-5 w-5" />
-                Tenho dúvidas
+                Falar no WhatsApp
               </a>
             </div>
-            <p className="mt-8 max-w-xl text-sm leading-relaxed text-nevoa">
+            <p className="mt-6 max-w-xl text-sm leading-snug text-nevoa">
               *Troca de tela e bateria: atendimento em domicílio para todos os modelos. Troca de vidro
               traseiro: atendimento no local disponível para modelos selecionados — consulte a
               disponibilidade. Para outros problemas, contamos com serviço leva e traz.
             </p>
           </div>
           {/* Assets definitivos em /public/brand (mesmo aparelho/enquadramento) */}
-          <BeforeAfter beforeSrc="/brand/iphone-broken.png" afterSrc="/brand/iphone-repaired.png" />
+          <BeforeAfter beforeSrc={`${import.meta.env.BASE_URL}brand/iphone-broken.png`} afterSrc={`${import.meta.env.BASE_URL}brand/iphone-repaired.png`} />
         </div>
       </section>
 
@@ -313,6 +311,13 @@ export function HomePage() {
               count={SOCIAL_PROOF.googleReviewCount}
               url={SOCIAL_PROOF.googleReviewsUrl}
             />
+            <div className="mt-5 border-t border-linha pt-4">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-cinza">Instagram</p>
+              <a href="https://www.instagram.com/iplay.rio/" target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-2 whitespace-nowrap text-base font-bold text-gelo transition hover:text-lima">
+                <span aria-hidden="true" className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-cinza text-[10px] font-black">IG</span>
+                @iplay.rio
+              </a>
+            </div>
           </div>
           <ul className="rounded-3xl border border-linha bg-musgo px-6 py-2 sm:px-8">
             {BENEFIT_ROWS.map(({ text, desc, Icon }) => (

@@ -23,6 +23,8 @@ export function AppointmentSummary({
   time,
   timeEnd,
   notes,
+  addonName,
+  addonPrice = 0,
 }: {
   selection: BookingSelection;
   customerName: string;
@@ -33,7 +35,11 @@ export function AppointmentSummary({
   /** Fim da janela — quando presente, "Quando" vira janela ("09h às 11h"). */
   timeEnd?: string;
   notes?: string;
+  addonName?: string | null;
+  addonPrice?: number;
 }) {
+  const pixTotal = selection.price ? effectivePix(selection.price) + addonPrice : null;
+  const cardTotal = selection.price ? effectiveCard(selection.price) + addonPrice : null;
   return (
     <div className="rounded-2xl border border-linha bg-musgo p-4 text-sm">
       <p className="font-display font-extrabold text-gelo">Resumo do agendamento</p>
@@ -43,14 +49,15 @@ export function AppointmentSummary({
         {selection.option && <Row label="Opção" value={selection.option.name} />}
         <Row
           label="Pix"
-          value={selection.price ? formatBRL(effectivePix(selection.price)) : 'Preço ainda não cadastrado.'}
+          value={pixTotal != null ? formatBRL(pixTotal) : 'Preço ainda não cadastrado.'}
         />
         {selection.price && (
           <Row
             label="Cartão"
-            value={`${formatBRL(effectiveCard(selection.price))} · até ${MAX_CARD_INSTALLMENTS}x de ${formatBRL(displayInstallment(effectiveCard(selection.price)))}`}
+            value={`${formatBRL(cardTotal!)} · até ${MAX_CARD_INSTALLMENTS}x de ${formatBRL(displayInstallment(cardTotal!))}`}
           />
         )}
+        {addonName && <Row label="Adicional" value={`${addonName} · ${formatBRL(addonPrice)}`} />}
         <Row label="Atendimento" value={`${SERVICE_MODE_LABEL.mobile} · Nós vamos até você.`} />
         <Row label="Cliente" value={customerName || '—'} />
         {phone != null && phone !== '' && <Row label="WhatsApp" value={phone} />}

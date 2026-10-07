@@ -44,6 +44,7 @@ export const supabaseBookingRepository: BookingRepository = {
       p_client_name: input.client.name,
       p_client_phone: input.client.phone,
       p_client_email: input.client.email || '',
+      p_client_cpf: input.client.cpf || '',
       p_model_id: input.deviceModelId,
       p_service_id: input.serviceId,
       p_service_option_id: input.serviceOptionId,

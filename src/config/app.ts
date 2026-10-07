@@ -10,8 +10,8 @@ export const APP_CONFIG = {
     id: 'company-iplay',
     slug: 'iplay',
     name: 'iPlay',
-    whatsapp: '5511999999999',
-    phone: '(11) 99999-9999',
+    whatsapp: '5521980047779',
+    phone: '(21) 98004-7779',
   },
   useMock: import.meta.env.VITE_USE_MOCK !== 'false',
   supabase: {

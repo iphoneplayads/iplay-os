@@ -12,12 +12,6 @@ export function Header() {
           <Link to="/" aria-label="iPlay — início">
             <Logo height={96} />
           </Link>
-          <Link
-            to="/agendar"
-            className="mt-3 flex min-h-[52px] items-center justify-center rounded-2xl bg-lima px-4 py-3 text-center font-bold text-noite transition hover:brightness-110 active:scale-[0.99]"
-          >
-            Ver preço e agendar
-          </Link>
         </div>
         {/* desktop: linha única */}
         <div className="hidden h-28 items-center justify-between sm:flex">

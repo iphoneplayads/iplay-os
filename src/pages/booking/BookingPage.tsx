@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { APP_CONFIG } from '@/config/app';
+import { SERVICE_SLUGS } from '@/config/constants';
 import { AppointmentSummary } from '@/components/booking/AppointmentSummary';
 import { BookingStep, ProgressIndicator } from '@/components/booking/BookingChrome';
 import { AddressForm, CustomerForm, NotesInput } from '@/components/booking/Forms';
@@ -44,6 +45,11 @@ export function BookingPage() {
   const [notes, setNotes] = useState('');
   const [created, setCreated] = useState<CreatedAppointment | null>(null);
   const [choosingId, setChoosingId] = useState<string | null>(null);
+  const [upsellOpen, setUpsellOpen] = useState(false);
+  const [selectedFilm, setSelectedFilm] = useState<string | null>(null);
+  const selectedFilmPrice = selectedFilm === 'Hydrogel Privacidade' ? 97 : selectedFilm ? 47 : 0;
+  const [screenGuideOpen, setScreenGuideOpen] = useState(false);
+  const pendingServiceOptions = useRef<Awaited<ReturnType<typeof flow.loadOptions>>>([]);
 
   // Janelas de atendimento (etapa schedule).
   const days = useMemo(() => nextCalendarDays(), []);
@@ -217,12 +223,14 @@ export function BookingPage() {
   if (flow.loading) return <LoadingState message="Carregando modelos e serviços…" />;
   if (flow.error) return <ErrorState message={flow.error} onRetry={() => window.location.reload()} />;
   if (created) {
-    const pixTotal =
+    const basePixTotal =
       created.appointment.quoted_pix_total ??
       (selection.price ? effectivePix(selection.price) : null);
-    const cardTotal =
+    const baseCardTotal =
       created.appointment.quoted_card_total ??
       (selection.price ? effectiveCard(selection.price) : null);
+    const pixTotal = basePixTotal != null ? basePixTotal + selectedFilmPrice : null;
+    const cardTotal = baseCardTotal != null ? baseCardTotal + selectedFilmPrice : null;
     const pixLabel = pixTotal != null ? formatBRL(pixTotal) : 'a confirmar';
     const cardLabel =
       cardTotal != null
@@ -260,7 +268,7 @@ export function BookingPage() {
   const selErrors = validateBookingSelection({ modelId: flow.modelId, serviceId: flow.serviceId });
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px] xl:grid-cols-[minmax(0,1fr)_240px]">
       <div className="min-w-0">
       <ProgressIndicator current={flow.step} />
 
@@ -296,34 +304,107 @@ export function BookingPage() {
               if (flow.serviceId && flow.serviceId !== id) flow.clearOptionSelection();
               flow.setServiceId(id);
               trackEvent('service_selected', { serviceId: id });
-              await flow.loadOptions(id);
+              const loadedOptions = await flow.loadOptions(id);
+              const selectedService = flow.services.find((service) => service.id === id);
+              pendingServiceOptions.current =
+                selectedService?.slug === SERVICE_SLUGS.battery
+                  ? loadedOptions.filter((option) => option.name.trim().toLowerCase().includes('premium')).slice(0, 1)
+                  : loadedOptions;
+              setUpsellOpen(true);
+              const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+              window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
             }}
           />
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <Button variant="secondary" onClick={() => flow.setStep('model')}>Voltar</Button>
-            <Button
-              disabled={!flow.serviceId}
-              onClick={async () => {
-                if (!flow.serviceId) return;
-                // 0 ou 1 opção: sem tela intermediária (a única é pré-selecionada).
-                if (flow.options.length > 1) {
-                  flow.setStep('option');
-                  return;
-                }
-                const single = flow.options.length === 1 ? flow.options[0].id : null;
-                if (single) flow.pickOption(single);
-                if (flow.modelId) await flow.loadPrice(flow.modelId, flow.serviceId, single);
-                flow.setStep('price');
-              }}
-            >
-              Continuar
-            </Button>
+          <div className="mt-4">
+            <Button variant="secondary" fullWidth onClick={() => { setUpsellOpen(false); flow.setStep('model'); }}>Voltar</Button>
           </div>
         </BookingStep>
       )}
 
+      {flow.step === 'service' && upsellOpen && flow.serviceId && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 sm:items-center sm:p-6">
+          <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl border border-linha bg-musgo p-5 sm:max-w-xl sm:rounded-3xl sm:p-6">
+            <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-lima">Próximo passo · opcional</p>
+            <h3 className="mt-1 font-display text-2xl font-extrabold text-gelo">Quer proteger seu iPhone?</h3>
+            <p className="mt-1 text-sm text-cinza">Escolha uma película ou siga sem adicionar.</p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {[
+                ['Hydrogel Transparente', 'R$ 47,00'],
+                ['Hydrogel Fosca', 'R$ 47,00'],
+                ['Hydrogel Privacidade', 'R$ 97,00'],
+              ].map(([name, value]) => (
+                <button key={name} type="button" onClick={async () => {
+                  setSelectedFilm(name); setUpsellOpen(false);
+                  const opts = pendingServiceOptions.current;
+                  if (opts.length > 1) return flow.setStep('option');
+                  const single = opts.length === 1 ? opts[0].id : null;
+                  if (single) flow.pickOption(single);
+                  if (flow.modelId) await flow.loadPrice(flow.modelId, flow.serviceId!, single);
+                  flow.setStep('price');
+                }} className="rounded-2xl border border-linha bg-noite p-4 text-left transition hover:border-lima">
+                  <span className="block font-bold text-gelo">Película {name}</span>
+                  <span className="mt-1 block text-sm font-extrabold text-lima">{value}</span>
+                </button>
+              ))}
+              <button type="button" onClick={async () => {
+                setSelectedFilm(null); setUpsellOpen(false);
+                const opts = pendingServiceOptions.current;
+                if (opts.length > 1) return flow.setStep('option');
+                const single = opts.length === 1 ? opts[0].id : null;
+                if (single) flow.pickOption(single);
+                if (flow.modelId) await flow.loadPrice(flow.modelId, flow.serviceId!, single);
+                flow.setStep('price');
+              }} className="rounded-2xl border border-linha bg-noite p-4 text-left font-bold text-cinza transition hover:border-cinza hover:text-gelo">
+                <span className="mr-2 font-black text-red-500" aria-hidden="true">✕</span>
+                Agora não
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {flow.step === 'option' && (
         <BookingStep title="Escolha a solução" hint="Etapa 3 — compare as opções com preço e garantia reais.">
+          <button
+            type="button"
+            onClick={() => setScreenGuideOpen(true)}
+            className="mb-4 inline-flex items-center gap-2 text-sm font-bold text-lima hover:underline"
+          >
+            Entenda a diferença entre as telas →
+          </button>
+          {screenGuideOpen && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label="Diferença entre os tipos de tela">
+              <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl border border-linha bg-musgo p-5 sm:max-w-2xl sm:rounded-3xl sm:p-7">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-lima">Guia rápido</p>
+                    <h3 className="mt-1 font-display text-2xl font-extrabold text-gelo">Qual tela escolher?</h3>
+                    <p className="mt-1 text-sm text-cinza">Compare sem sair do seu agendamento.</p>
+                  </div>
+                  <button type="button" onClick={() => setScreenGuideOpen(false)} aria-label="Fechar" className="flex h-10 w-10 flex-none items-center justify-center rounded-full border border-linha bg-noite text-xl text-gelo">×</button>
+                </div>
+                <div className="mt-5 grid gap-3">
+                  {[
+                    ['Premium', '★★★½', 'Boa qualidade', 'Cores equilibradas', 'Toque responsivo', '3 meses de garantia'],
+                    ['Pro', '★★★★', 'Qualidade superior', 'Cores vivas e brilho forte', 'Toque muito próximo ao original', '1 ano de garantia'],
+                    ['Original Remanufaturada', '★★★★★', 'Peça original remanufaturada', 'Mesma qualidade de imagem e toque do original', 'Máxima fidelidade', '1 ano de garantia'],
+                  ].map(([name, stars, a, b, c, warranty]) => (
+                    <div key={name} className="rounded-2xl border border-linha bg-noite p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="font-display text-lg font-extrabold text-gelo">{name}</p>
+                        <span className="whitespace-nowrap text-sm font-bold text-lima">{stars}</span>
+                      </div>
+                      <div className="mt-3 grid gap-1 text-sm text-nevoa sm:grid-cols-3">
+                        <span>✓ {a}</span><span>✓ {b}</span><span>✓ {c}</span>
+                      </div>
+                      <p className="mt-3 text-xs font-bold text-lima">{warranty}</p>
+                    </div>
+                  ))}
+                </div>
+                <Button fullWidth className="mt-5" onClick={() => setScreenGuideOpen(false)}>Voltar para escolher</Button>
+              </div>
+            </div>
+          )}
           {flow.options.length === 0 ? (
             <EmptyState title="Nenhuma opção disponível" hint="Volte e escolha outro serviço." />
           ) : (
@@ -353,17 +434,34 @@ export function BookingPage() {
           ) : (
             <>
               <PriceCard
-                title={flow.selectedService?.name ?? 'Serviço'}
-                subtitle={`${flow.selectedModel?.name ?? ''}${flow.selectedOption ? ` · ${flow.selectedOption.name}` : ''}`}
+                title={flow.selectedService?.slug === SERVICE_SLUGS.battery ? 'Bateria Premium' : (flow.selectedService?.name ?? 'Serviço')}
+                subtitle={flow.selectedService?.slug === SERVICE_SLUGS.battery ? 'Homologada pela ANATEL · 6 meses de garantia' : (flow.selectedOption?.name ?? '')}
                 price={flow.price}
               />
+              {selectedFilm && flow.price && (
+                <div className="mt-3 rounded-2xl border border-lima/30 bg-musgo p-4 text-sm">
+                  <div className="flex justify-between gap-3"><span className="text-cinza">Reparo + película no PIX</span><strong className="text-lima">{formatBRL(effectivePix(flow.price) + selectedFilmPrice)}</strong></div>
+                  <div className="mt-1 flex justify-between gap-3"><span className="text-cinza">Reparo + película no cartão</span><strong className="text-gelo">{MAX_CARD_INSTALLMENTS}x de {formatBRL(displayInstallment(effectiveCard(flow.price) + selectedFilmPrice))}</strong></div>
+                </div>
+              )}
+              {selectedFilm && (
+                <div className="mt-3 flex items-center justify-between rounded-2xl border border-linha bg-musgo px-4 py-3 text-sm">
+                  <span className="text-cinza">Película selecionada</span>
+                  <span className="text-right font-bold text-gelo">Película {selectedFilm}<span className="ml-2 text-lima">{formatBRL(selectedFilmPrice)}</span></span>
+                </div>
+              )}
               <dl className="mt-3 space-y-1 rounded-2xl border border-linha bg-musgo p-4 text-sm text-nevoa">
                 <div className="flex justify-between gap-2"><dt className="text-cinza">Modelo</dt><dd className="font-semibold text-gelo">{flow.selectedModel?.name ?? '—'}</dd></div>
                 <div className="flex justify-between gap-2"><dt className="text-cinza">Serviço</dt><dd className="font-semibold text-gelo">{flow.selectedService?.name ?? '—'}</dd></div>
                 {flow.selectedOption && (
                   <div className="flex justify-between gap-2"><dt className="text-cinza">Opção</dt><dd className="font-semibold text-gelo">{flow.selectedOption.name}</dd></div>
                 )}
-                {warrantyLabel && (
+                {flow.selectedService?.slug === SERVICE_SLUGS.battery ? (
+                  <>
+                    <div className="flex justify-between gap-2"><dt className="text-cinza">Certificação</dt><dd className="font-semibold text-gelo">Homologada pela ANATEL</dd></div>
+                    <div className="flex justify-between gap-2"><dt className="text-cinza">Garantia</dt><dd className="font-semibold text-lima">6 meses de garantia</dd></div>
+                  </>
+                ) : warrantyLabel && (
                   <div className="flex justify-between gap-2"><dt className="text-cinza">Garantia</dt><dd className="font-semibold text-lima">{warrantyLabel}</dd></div>
                 )}
               </dl>
@@ -492,6 +590,8 @@ export function BookingPage() {
             time={flow.scheduling.startTime}
             timeEnd={flow.scheduling.endTime}
             notes={notes}
+            addonName={selectedFilm ? `Película ${selectedFilm}` : null}
+            addonPrice={selectedFilmPrice}
           />
           <p className="mt-2 text-xs text-cinza">
             O atendimento será realizado dentro da janela selecionada.
@@ -516,7 +616,7 @@ export function BookingPage() {
                     priceId: flow.price?.id ?? null,
                     address: flow.address,
                     scheduling: flow.scheduling,
-                    notes: notes.trim() || undefined,
+                    notes: [notes.trim(), selectedFilm ? ('Película adicional: ' + selectedFilm + ' — ' + formatBRL(selectedFilmPrice)) : ''].filter(Boolean).join('\n') || undefined,
                     idempotencyKey: idempotencyRef.current ?? undefined,
                     attribution,
                     source: 'site',
@@ -556,7 +656,12 @@ export function BookingPage() {
       )}
       </div>
       <aside className="hidden lg:block" aria-label="Resumo do orçamento">
-        <QuoteAside selection={quote} onEdit={editQuoteStep} />
+        <QuoteAside
+          selection={quote}
+          onEdit={editQuoteStep}
+          addonName={selectedFilm ? `Película ${selectedFilm}` : null}
+          addonPrice={selectedFilmPrice}
+        />
       </aside>
     </div>
   );

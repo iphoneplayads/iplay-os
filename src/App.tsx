@@ -44,7 +44,7 @@ function HomeRoute() {
 
 export function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || '/'}>
       <AuthProvider>
         <ToastProvider>
           <Routes>

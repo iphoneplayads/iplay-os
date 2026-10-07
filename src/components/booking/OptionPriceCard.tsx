@@ -72,7 +72,7 @@ export function OptionPriceCard({
         )}
       </div>
       {option.description && <p className="mt-1 text-sm text-nevoa">{option.description}</p>}
-      <p className="mt-2 text-xs font-semibold text-gelo">
+      <p className="mt-3 text-xs font-semibold text-gelo">
         {option.warranty_months} {option.warranty_months === 1 ? 'mês' : 'meses'} de garantia
       </p>
       <div className="mt-3 flex items-end justify-between gap-3 border-t border-linha pt-3">
@@ -81,9 +81,10 @@ export function OptionPriceCard({
             <p className="text-sm text-cinza">Consultando…</p>
           ) : price ? (
             <>
-              <p className="font-display text-2xl font-extrabold text-gelo">{formatBRL(effectivePix(price))} <span className="text-sm font-bold text-cinza">no Pix</span></p>
-              <p className="text-xs text-cinza">
-                {formatBRL(effectiveCard(price))} no cartão · até {MAX_CARD_INSTALLMENTS}x de {formatBRL(displayInstallment(effectiveCard(price)))} sem juros
+              <p className="font-display text-2xl font-extrabold text-gelo">{MAX_CARD_INSTALLMENTS}x de {formatBRL(displayInstallment(effectiveCard(price)))}</p>
+              <p className="text-xs font-semibold text-gelo">sem juros</p>
+              <p className="mt-1 text-xs text-cinza">
+                {formatBRL(effectivePix(price))} com desconto no PIX
               </p>
             </>
           ) : (
@@ -91,7 +92,7 @@ export function OptionPriceCard({
           )}
         </div>
         <Button size="md" disabled={unavailable || choosing} onClick={onChoose}>
-          {choosing ? 'Aguarde…' : `Escolher ${option.name}`}
+          {choosing ? 'Aguarde…' : 'Escolher'}
         </Button>
       </div>
       {unavailable && (
