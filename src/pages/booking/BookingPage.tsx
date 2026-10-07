@@ -656,7 +656,12 @@ export function BookingPage() {
       )}
       </div>
       <aside className="hidden lg:block" aria-label="Resumo do orçamento">
-        <QuoteAside selection={quote} onEdit={editQuoteStep} />
+        <QuoteAside
+          selection={quote}
+          onEdit={editQuoteStep}
+          addonName={selectedFilm ? `Película ${selectedFilm}` : null}
+          addonPrice={selectedFilmPrice}
+        />
       </aside>
     </div>
   );
