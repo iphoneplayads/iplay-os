@@ -223,12 +223,14 @@ export function BookingPage() {
   if (flow.loading) return <LoadingState message="Carregando modelos e serviços…" />;
   if (flow.error) return <ErrorState message={flow.error} onRetry={() => window.location.reload()} />;
   if (created) {
-    const pixTotal =
+    const basePixTotal =
       created.appointment.quoted_pix_total ??
       (selection.price ? effectivePix(selection.price) : null);
-    const cardTotal =
+    const baseCardTotal =
       created.appointment.quoted_card_total ??
       (selection.price ? effectiveCard(selection.price) : null);
+    const pixTotal = basePixTotal != null ? basePixTotal + selectedFilmPrice : null;
+    const cardTotal = baseCardTotal != null ? baseCardTotal + selectedFilmPrice : null;
     const pixLabel = pixTotal != null ? formatBRL(pixTotal) : 'a confirmar';
     const cardLabel =
       cardTotal != null
