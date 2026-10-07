@@ -79,7 +79,7 @@ export function HomePage() {
     <div>
       {/* ============ HERO ============ */}
       <section
-        className="relative overflow-hidden px-8 pb-8 pt-5 sm:p-12 lg:p-16"
+        className="relative -mt-6 overflow-hidden px-8 pb-8 pt-5 sm:-mt-6 sm:p-12 lg:-mt-6 lg:p-16"
         style={{ background: 'radial-gradient(1100px 520px at 85% 20%, #1c3013 0, transparent 60%), radial-gradient(800px 500px at 10% 100%, #101a13 0, transparent 55%), #0A0F0D' }}
       >
         {/* glow cinematográfico atrás do aparelho + vinheta */}
