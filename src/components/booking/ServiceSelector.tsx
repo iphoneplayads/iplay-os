@@ -34,7 +34,7 @@ export function ServiceSelector({
             onClick={() => onSelect(svc.id)}
             aria-pressed={active}
             className={cn(
-              'group flex min-h-[88px] items-center gap-4 rounded-2xl border p-4 text-left transition active:scale-[0.99]',
+              'group flex min-h-[88px] items-center gap-3 rounded-2xl border p-4 text-left transition active:scale-[0.99]',
               active
                 ? 'border-lima bg-lima text-noite'
                 : 'border-linha bg-musgo text-gelo hover:border-lima',
@@ -46,7 +46,7 @@ export function ServiceSelector({
             )}>
               <Icon />
             </span>
-            <span className="block font-display text-base font-extrabold">{p.label}</span>
+            <span className="block min-w-0 font-display text-sm font-extrabold leading-tight sm:text-base lg:whitespace-nowrap">{p.label}</span>
           </button>
         );
       })}
