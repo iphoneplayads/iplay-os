@@ -34,19 +34,19 @@ export function ServiceSelector({
             onClick={() => onSelect(svc.id)}
             aria-pressed={active}
             className={cn(
-              'group flex min-h-[88px] items-center gap-3 rounded-2xl border p-4 text-left transition active:scale-[0.99]',
+              'group flex min-h-[82px] min-w-0 items-center gap-2.5 rounded-2xl border px-3 py-4 text-left transition active:scale-[0.99] xl:px-4',
               active
                 ? 'border-lima bg-lima text-noite'
                 : 'border-linha bg-musgo text-gelo hover:border-lima',
             )}
           >
             <span className={cn(
-              'inline-flex h-12 w-12 flex-none items-center justify-center rounded-xl border [&>svg]:h-6 [&>svg]:w-6',
+              'inline-flex h-11 w-11 flex-none items-center justify-center rounded-xl border [&>svg]:h-6 [&>svg]:w-6',
               active ? 'border-noite/20 bg-noite/10 text-noite' : 'border-linha bg-noite text-lima',
             )}>
               <Icon />
             </span>
-            <span className="block min-w-0 font-display text-sm font-extrabold leading-tight sm:text-base xl:whitespace-nowrap">{p.label}</span>
+            <span className="block min-w-0 font-display text-[13px] font-extrabold leading-tight sm:text-sm xl:text-[15px] xl:whitespace-nowrap">{p.label}</span>
           </button>
         );
       })}
