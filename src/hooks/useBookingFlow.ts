@@ -4,7 +4,7 @@ import { trackEvent } from '@/lib/analytics/events';
 import type { AddressInput, AttributionInput, BookingStepId, CustomerInput, SchedulingInput } from '@/types/booking';
 import type { DeviceModel, Price, Service, ServiceOption } from '@/types/domain';
 
-const EMPTY_CUSTOMER: CustomerInput = { name: '', phone: '', email: '' };
+const EMPTY_CUSTOMER: CustomerInput = { name: '', phone: '', email: '', cpf: '' };
 const EMPTY_ADDRESS: AddressInput = {
   zip_code: '', street: '', number: '', complement: '',
   neighborhood: '', city: '', state: '', reference: '',
