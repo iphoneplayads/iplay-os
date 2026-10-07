@@ -47,6 +47,7 @@ export function BookingPage() {
   const [choosingId, setChoosingId] = useState<string | null>(null);
   const [upsellOpen, setUpsellOpen] = useState(false);
   const [selectedFilm, setSelectedFilm] = useState<string | null>(null);
+  const selectedFilmPrice = selectedFilm === 'Hydrogel Privacidade' ? 97 : selectedFilm ? 47 : 0;
   const [screenGuideOpen, setScreenGuideOpen] = useState(false);
   const pendingServiceOptions = useRef<Awaited<ReturnType<typeof flow.loadOptions>>>([]);
 
@@ -438,7 +439,7 @@ export function BookingPage() {
               {selectedFilm && (
                 <div className="mt-3 flex items-center justify-between rounded-2xl border border-linha bg-musgo px-4 py-3 text-sm">
                   <span className="text-cinza">Película selecionada</span>
-                  <span className="font-bold text-gelo">Película {selectedFilm}</span>
+                  <span className="text-right font-bold text-gelo">Película {selectedFilm}<span className="ml-2 text-lima">{formatBRL(selectedFilmPrice)}</span></span>
                 </div>
               )}
               <dl className="mt-3 space-y-1 rounded-2xl border border-linha bg-musgo p-4 text-sm text-nevoa">
