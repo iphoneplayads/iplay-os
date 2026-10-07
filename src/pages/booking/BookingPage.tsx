@@ -302,61 +302,55 @@ export function BookingPage() {
               trackEvent('service_selected', { serviceId: id });
               pendingServiceOptions.current = await flow.loadOptions(id);
               setUpsellOpen(true);
+              const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+              window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
             }}
           />
-          {upsellOpen && flow.serviceId && (
-            <div className="mt-5 rounded-3xl border border-lima/40 bg-musgo p-5">
-              <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-lima">Opcional</p>
-              <h3 className="mt-1 font-display text-xl font-extrabold text-gelo">Proteja seu iPhone</h3>
-              <p className="mt-1 text-sm text-cinza">Aproveite o atendimento e adicione uma película. No máximo uma por agendamento.</p>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                {[
-                  ['Hydrogel Transparente', 'R$ 47,00'],
-                  ['Hydrogel Fosca', 'R$ 47,00'],
-                  ['Hydrogel Privacidade', 'R$ 97,00'],
-                ].map(([name, value]) => (
-                  <button
-                    key={name}
-                    type="button"
-                    onClick={async () => {
-                      setSelectedFilm(name);
-                      setUpsellOpen(false);
-                      const opts = pendingServiceOptions.current;
-                      if (opts.length > 1) return flow.setStep('option');
-                      const single = opts.length === 1 ? opts[0].id : null;
-                      if (single) flow.pickOption(single);
-                      if (flow.modelId) await flow.loadPrice(flow.modelId, flow.serviceId!, single);
-                      flow.setStep('price');
-                    }}
-                    className="rounded-2xl border border-linha bg-noite p-4 text-left transition hover:border-lima"
-                  >
-                    <span className="block font-bold text-gelo">Película {name}</span>
-                    <span className="mt-1 block text-sm font-extrabold text-lima">{value}</span>
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setSelectedFilm(null);
-                    setUpsellOpen(false);
-                    const opts = pendingServiceOptions.current;
-                    if (opts.length > 1) return flow.setStep('option');
-                    const single = opts.length === 1 ? opts[0].id : null;
-                    if (single) flow.pickOption(single);
-                    if (flow.modelId) await flow.loadPrice(flow.modelId, flow.serviceId!, single);
-                    flow.setStep('price');
-                  }}
-                  className="rounded-2xl border border-linha bg-noite p-4 text-left font-bold text-cinza transition hover:border-cinza hover:text-gelo"
-                >
-                  Agora não
-                </button>
-              </div>
-            </div>
-          )}
           <div className="mt-4">
             <Button variant="secondary" fullWidth onClick={() => { setUpsellOpen(false); flow.setStep('model'); }}>Voltar</Button>
           </div>
         </BookingStep>
+      )}
+
+      {flow.step === 'service' && upsellOpen && flow.serviceId && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 sm:items-center sm:p-6">
+          <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl border border-linha bg-musgo p-5 sm:max-w-xl sm:rounded-3xl sm:p-6">
+            <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-lima">Próximo passo · opcional</p>
+            <h3 className="mt-1 font-display text-2xl font-extrabold text-gelo">Quer proteger seu iPhone?</h3>
+            <p className="mt-1 text-sm text-cinza">Escolha uma película ou siga sem adicionar.</p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {[
+                ['Hydrogel Transparente', 'R$ 47,00'],
+                ['Hydrogel Fosca', 'R$ 47,00'],
+                ['Hydrogel Privacidade', 'R$ 97,00'],
+              ].map(([name, value]) => (
+                <button key={name} type="button" onClick={async () => {
+                  setSelectedFilm(name); setUpsellOpen(false);
+                  const opts = pendingServiceOptions.current;
+                  if (opts.length > 1) return flow.setStep('option');
+                  const single = opts.length === 1 ? opts[0].id : null;
+                  if (single) flow.pickOption(single);
+                  if (flow.modelId) await flow.loadPrice(flow.modelId, flow.serviceId!, single);
+                  flow.setStep('price');
+                }} className="rounded-2xl border border-linha bg-noite p-4 text-left transition hover:border-lima">
+                  <span className="block font-bold text-gelo">Película {name}</span>
+                  <span className="mt-1 block text-sm font-extrabold text-lima">{value}</span>
+                </button>
+              ))}
+              <button type="button" onClick={async () => {
+                setSelectedFilm(null); setUpsellOpen(false);
+                const opts = pendingServiceOptions.current;
+                if (opts.length > 1) return flow.setStep('option');
+                const single = opts.length === 1 ? opts[0].id : null;
+                if (single) flow.pickOption(single);
+                if (flow.modelId) await flow.loadPrice(flow.modelId, flow.serviceId!, single);
+                flow.setStep('price');
+              }} className="rounded-2xl border border-linha bg-noite p-4 text-left font-bold text-cinza transition hover:border-cinza hover:text-gelo">
+                Agora não
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {flow.step === 'option' && (
