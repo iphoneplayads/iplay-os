@@ -17,10 +17,14 @@ export function QuoteAside({
   selection,
   onEdit,
   compact,
+  addonName,
+  addonPrice = 0,
 }: {
   selection: QuoteSelection;
   onEdit: (step: BookingStepId) => void;
   compact?: boolean;
+  addonName?: string | null;
+  addonPrice?: number;
 }) {
   return (
     <div className={compact ? 'rounded-2xl border border-linha bg-musgo p-4 text-sm' : 'sticky top-24 rounded-2xl border border-linha bg-musgo p-4 text-sm'}>
@@ -47,18 +51,24 @@ export function QuoteAside({
             <EditButton onClick={() => onEdit('option')} />
           </dd>
         </div>
-        <div className="flex items-center justify-between gap-2 border-t border-linha pt-2">
+        {addonName && addonPrice > 0 && (
+          <div className="flex items-center justify-between gap-2 border-t border-linha pt-2">
+            <dt className="text-cinza">Película</dt>
+            <dd className="text-right font-semibold text-gelo">{addonName} <span className="text-lima">{formatBRL(addonPrice)}</span></dd>
+          </div>
+        )}
+        <div className={`flex items-center justify-between gap-2 ${addonName && addonPrice > 0 ? '' : 'border-t border-linha pt-2'}`}>
           <dt className="text-cinza">Cartão</dt>
           <dd className="text-right font-display text-base font-extrabold text-gelo">
             {selection.price
-              ? `${MAX_CARD_INSTALLMENTS}x de ${formatBRL(displayInstallment(effectiveCard(selection.price)))}`
+              ? `${MAX_CARD_INSTALLMENTS}x de ${formatBRL(displayInstallment(effectiveCard(selection.price) + addonPrice))}`
               : '—'}
           </dd>
         </div>
         <div className="flex items-start justify-between gap-3">
           <dt className="pt-0.5 text-cinza">PIX</dt>
           <dd className="max-w-[175px] text-right text-sm font-bold text-lima">
-            {selection.price ? <>{formatBRL(effectivePix(selection.price))}<span className="block text-[11px] font-semibold text-cinza">com desconto no PIX</span></> : '—'}
+            {selection.price ? <>{formatBRL(effectivePix(selection.price) + addonPrice)}<span className="block text-[11px] font-semibold text-cinza">com desconto no PIX</span></> : '—'}
           </dd>
         </div>
         <div className="flex items-center justify-between gap-2">
