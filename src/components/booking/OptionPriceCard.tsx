@@ -72,19 +72,6 @@ export function OptionPriceCard({
         )}
       </div>
       {option.description && <p className="mt-1 text-sm text-nevoa">{option.description}</p>}
-      {(() => {
-        const key = option.name.trim().toLowerCase();
-        const details =
-          key === 'premium' ? ['Boa qualidade', 'Cores equilibradas', 'Toque responsivo'] :
-          key === 'pro' ? ['Qualidade superior', 'Cores vivas e brilho forte', 'Toque muito próximo ao original'] :
-          key === 'original remanufaturada' ? ['Peça original remanufaturada', 'Mesma qualidade de imagem e toque do original', 'Máxima fidelidade'] :
-          [];
-        return details.length ? (
-          <ul className="mt-3 grid gap-1 text-xs text-nevoa sm:grid-cols-3">
-            {details.map((item) => <li key={item} className="rounded-lg bg-noite px-2.5 py-2">✓ {item}</li>)}
-          </ul>
-        ) : null;
-      })()}
       <p className="mt-3 text-xs font-semibold text-gelo">
         {option.warranty_months} {option.warranty_months === 1 ? 'mês' : 'meses'} de garantia
       </p>
