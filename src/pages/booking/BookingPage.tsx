@@ -346,6 +346,7 @@ export function BookingPage() {
                 if (flow.modelId) await flow.loadPrice(flow.modelId, flow.serviceId!, single);
                 flow.setStep('price');
               }} className="rounded-2xl border border-linha bg-noite p-4 text-left font-bold text-cinza transition hover:border-cinza hover:text-gelo">
+                <span className="mr-2 font-black text-red-500" aria-hidden="true">✕</span>
                 Agora não
               </button>
             </div>
