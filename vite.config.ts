@@ -45,6 +45,7 @@ function seoFiles(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: process.env.GITHUB_ACTIONS ? '/iplay-os/' : '/',
   plugins: [react(), tailwindcss(), seoFiles()],
   resolve: {
     alias: {
