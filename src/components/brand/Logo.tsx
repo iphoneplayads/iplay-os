@@ -6,7 +6,7 @@
 export function Logo({ height = 32, className }: { height?: number; className?: string }) {
   return (
     <img
-      src="/brand/logo-iplay.png"
+      src={`${import.meta.env.BASE_URL}brand/logo-iplay.png`}
       alt="iPlay — Conserto de iPhone. Onde você estiver."
       height={height}
       style={{ height, width: 'auto' }}
