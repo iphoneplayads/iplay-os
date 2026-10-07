@@ -6,8 +6,6 @@ import { MAX_CARD_INSTALLMENTS } from '@/config/pricing';
 import { windowLabel } from '@/lib/scheduling';
 
 function Row({ label, value }: { label: string; value: string }) {
-  const pixTotal = selection.price ? effectivePix(selection.price) + addonPrice : null;
-  const cardTotal = selection.price ? effectiveCard(selection.price) + addonPrice : null;
   return (
     <div className="flex justify-between gap-2">
       <dt className="text-cinza">{label}</dt>
@@ -40,6 +38,8 @@ export function AppointmentSummary({
   addonName?: string | null;
   addonPrice?: number;
 }) {
+  const pixTotal = selection.price ? effectivePix(selection.price) + addonPrice : null;
+  const cardTotal = selection.price ? effectiveCard(selection.price) + addonPrice : null;
   return (
     <div className="rounded-2xl border border-linha bg-musgo p-4 text-sm">
       <p className="font-display font-extrabold text-gelo">Resumo do agendamento</p>
