@@ -81,9 +81,10 @@ export function OptionPriceCard({
             <p className="text-sm text-cinza">Consultando…</p>
           ) : price ? (
             <>
-              <p className="font-display text-2xl font-extrabold text-gelo">{formatBRL(effectivePix(price))} <span className="text-sm font-bold text-cinza">no Pix</span></p>
-              <p className="text-xs text-cinza">
-                {formatBRL(effectiveCard(price))} no cartão · até {MAX_CARD_INSTALLMENTS}x de {formatBRL(displayInstallment(effectiveCard(price)))} sem juros
+              <p className="font-display text-2xl font-extrabold text-gelo">{MAX_CARD_INSTALLMENTS}x de {formatBRL(displayInstallment(effectiveCard(price)))}</p>
+              <p className="text-xs font-semibold text-gelo">sem juros</p>
+              <p className="mt-1 text-xs text-cinza">
+                {formatBRL(effectivePix(price))} com desconto no PIX
               </p>
             </>
           ) : (
