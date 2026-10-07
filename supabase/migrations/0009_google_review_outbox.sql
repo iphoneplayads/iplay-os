@@ -1,6 +1,12 @@
 -- Pós-venda: agenda pedido de avaliação 4 dias após conclusão da OS.
 -- Não envia WhatsApp por si só; apenas cria uma pendência idempotente na outbox.
 
+-- Tipos suportados pela fila.
+alter table public.notification_outbox drop constraint if exists notification_outbox_type_check;
+alter table public.notification_outbox add constraint notification_outbox_type_check
+  check (type in ('booking_confirmation', 'google_review_request'));
+
+
 alter table public.notification_outbox
   add column if not exists service_order_id uuid references public.service_orders(id) on delete cascade,
   add column if not exists scheduled_for timestamptz;
