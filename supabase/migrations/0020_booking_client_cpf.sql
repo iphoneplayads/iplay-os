@@ -1,5 +1,14 @@
 -- Preview: adiciona CPF ao create_booking e grava em clients.cpf.
 -- Aplicar no Supabase antes de testar o CPF com backend real.
+-- Remove as duas assinaturas legadas existentes no banco antes de recriar a RPC.
+drop function if exists public.create_booking(
+  text, text, text, text, uuid, uuid, uuid,
+  text, text, text, text, text, text, text, text,
+  date, time, text, text, text,
+  text, text, text, text, text, text,
+  time
+);
+
 drop function if exists public.create_booking(
   text, text, text, text, uuid, uuid, uuid,
   text, text, text, text, text, text, text, text,
