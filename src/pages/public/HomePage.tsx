@@ -79,7 +79,7 @@ export function HomePage() {
     <div>
       {/* ============ HERO ============ */}
       <section
-        className="relative overflow-hidden p-8 sm:p-12 lg:p-16"
+        className="relative overflow-hidden px-8 pb-8 pt-5 sm:p-12 lg:p-16"
         style={{ background: 'radial-gradient(1100px 520px at 85% 20%, #1c3013 0, transparent 60%), radial-gradient(800px 500px at 10% 100%, #101a13 0, transparent 55%), #0A0F0D' }}
       >
         {/* glow cinematográfico atrás do aparelho + vinheta */}
@@ -97,10 +97,8 @@ export function HomePage() {
               <span aria-hidden="true" className="h-2 w-2 rounded-full bg-lima" />
               Assistência técnica especializada em iPhone
             </p>
-            <h1 className="mt-5 font-display text-5xl font-extrabold leading-[1.04] tracking-tight text-gelo sm:text-6xl xl:text-7xl">
-              Seu iPhone
-              <br />
-              deu problema?
+            <h1 className="mt-4 font-display text-5xl font-extrabold leading-[0.94] tracking-tight text-gelo sm:mt-5 sm:text-6xl sm:leading-[1.04] xl:text-7xl">
+              Seu iPhone quebrou?
               <br />
               <span className="text-lima">
                 A gente resolve
@@ -124,11 +122,11 @@ export function HomePage() {
                 href={WA_LINK}
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Tenho dúvidas — conversar no WhatsApp"
+                aria-label="Falar no WhatsApp"
                 className="flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border border-linha bg-noite px-7 py-4 text-center text-base font-semibold text-white transition hover:border-cinza sm:text-lg"
               >
                 <WhatsAppIcon className="h-5 w-5" />
-                Tenho dúvidas
+                Falar no WhatsApp
               </a>
             </div>
             <p className="mt-8 max-w-xl text-sm leading-relaxed text-nevoa">
