@@ -201,7 +201,7 @@ async function claimBatch(
   const client = db as any;
   const { data, error } = await db.rpc('claim_notification_batch', {
     p_limit: outboxId ? 1 : limit,
-    p_types: ['booking_confirmation'],
+    p_types: ['booking_confirmation', 'google_review_request'],
     p_stale_seconds: DEFAULT_STALE_SECONDS,
   });
   if (!error) {
@@ -218,7 +218,7 @@ async function claimBatch(
     .from('notification_outbox')
     .select('id,company_id,appointment_id,type,destino,payload,status,attempts')
     .eq('status', 'pending')
-    .eq('type', 'booking_confirmation')
+    .in('type', ['booking_confirmation', 'google_review_request'])
     .order('created_at', { ascending: true })
     .limit(outboxId ? 1 : limit);
   if (outboxId) query = query.eq('id', outboxId);
@@ -226,7 +226,7 @@ async function claimBatch(
   if (listed.error) throw new Error(`outbox_list_failed: ${listed.error.message}`);
   const jobs: OutboxRow[] = [];
   for (const row of (listed.data ?? []) as OutboxRow[]) {
-    if (row.type !== 'booking_confirmation' || !isClaimable({ status: row.status, claimed_at: null }, Date.now())) {
+    if (!['booking_confirmation', 'google_review_request'].includes(row.type) || !isClaimable({ status: row.status, claimed_at: null }, Date.now())) {
       continue;
     }
     const claimed = await client
