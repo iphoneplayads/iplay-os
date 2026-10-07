@@ -138,7 +138,7 @@ export function HomePage() {
             </p>
           </div>
           {/* Assets definitivos em /public/brand (mesmo aparelho/enquadramento) */}
-          <BeforeAfter beforeSrc="/brand/iphone-broken.png" afterSrc="/brand/iphone-repaired.png" />
+          <BeforeAfter beforeSrc={`${import.meta.env.BASE_URL}brand/iphone-broken.png`} afterSrc={`${import.meta.env.BASE_URL}brand/iphone-repaired.png`} />
         </div>
       </section>
 
