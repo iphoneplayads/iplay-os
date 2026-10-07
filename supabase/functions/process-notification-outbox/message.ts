@@ -220,3 +220,25 @@ export function isClaimable(
   if (!Number.isFinite(claimedMs)) return true;
   return nowMs - claimedMs > staleSeconds * 1000;
 }
+
+
+export interface ReviewRequestData {
+  firstName: string;
+  orderNumber: string;
+  reviewUrl: string;
+}
+
+export function buildReviewRequestText(d: ReviewRequestData): string {
+  return [
+    `Olá, ${d.firstName}! 😊`,
+    'Passando para saber se ficou tudo certinho com o seu iPhone após o atendimento da iPlay.',
+    'Se puder, sua avaliação ajuda muito o nosso trabalho. 💚',
+    `⭐ Avaliar a iPlay no Google: ${d.reviewUrl}`,
+    `OS: ${d.orderNumber}`,
+    'Obrigado por confiar na iPlay!',
+  ].join('\n');
+}
+
+export function buildReviewTemplateParams(d: ReviewRequestData): string[] {
+  return [d.firstName, d.orderNumber, d.reviewUrl];
+}
