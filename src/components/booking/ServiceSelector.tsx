@@ -22,7 +22,7 @@ export function ServiceSelector({
 }) {
   const bySlug = new Map(services.map((s) => [s.slug, s]));
   return (
-    <div className="grid grid-cols-1 gap-2 lg:grid-cols-1 xl:grid-cols-2">
+    <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
       {PROBLEM_OPTIONS.map((p) => {
         const svc = bySlug.get(p.serviceSlug);
         if (!svc) return null;
@@ -46,7 +46,7 @@ export function ServiceSelector({
             )}>
               <Icon />
             </span>
-            <span className="block min-w-0 font-display text-sm font-extrabold leading-tight sm:text-base">{p.label}</span>
+            <span className="block min-w-0 font-display text-sm font-extrabold leading-tight sm:text-base xl:whitespace-nowrap">{p.label}</span>
           </button>
         );
       })}
