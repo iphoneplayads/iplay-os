@@ -264,7 +264,7 @@ export function BookingPage() {
   const selErrors = validateBookingSelection({ modelId: flow.modelId, serviceId: flow.serviceId });
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px] xl:grid-cols-[minmax(0,1fr)_280px]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px] xl:grid-cols-[minmax(0,1fr)_240px]">
       <div className="min-w-0">
       <ProgressIndicator current={flow.step} />
 
