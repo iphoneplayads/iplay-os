@@ -606,7 +606,7 @@ export function BookingPage() {
                     priceId: flow.price?.id ?? null,
                     address: flow.address,
                     scheduling: flow.scheduling,
-                    notes: notes.trim() || undefined,
+                    notes: [notes.trim(), selectedFilm ? ('Película adicional: ' + selectedFilm + ' — ' + formatBRL(selectedFilmPrice)) : ''].filter(Boolean).join('\n') || undefined,
                     idempotencyKey: idempotencyRef.current ?? undefined,
                     attribution,
                     source: 'site',
