@@ -106,10 +106,14 @@ export function HomePage() {
                 onde você estiver.*
               </span>
             </h1>
-            <p className="mt-4 max-w-xl text-lg text-nevoa">
+            <p className="mt-4 max-w-xl text-lg leading-snug text-nevoa">
               Escolha o modelo, veja o preço antes de agendar e deixe o resto com a iPlay.
             </p>
-            <div className="mt-7 flex flex-col gap-2 sm:flex-row">
+            <a href="https://www.instagram.com/iplay.rio/" target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-nevoa transition hover:text-lima">
+              <span aria-hidden="true" className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-cinza text-[10px] font-black">IG</span>
+              @iplay.rio
+            </a>
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
               <Link
                 to="/agendar"
                 onClick={() => trackEvent('booking_started', { entry: 'home_cta' })}
@@ -129,7 +133,7 @@ export function HomePage() {
                 Falar no WhatsApp
               </a>
             </div>
-            <p className="mt-8 max-w-xl text-sm leading-relaxed text-nevoa">
+            <p className="mt-6 max-w-xl text-sm leading-snug text-nevoa">
               *Troca de tela e bateria: atendimento em domicílio para todos os modelos. Troca de vidro
               traseiro: atendimento no local disponível para modelos selecionados — consulte a
               disponibilidade. Para outros problemas, contamos com serviço leva e traz.
