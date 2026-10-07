@@ -5,7 +5,7 @@
  * Opção sem entrada: sem estrelas (sem inventar dado).
  */
 const RATINGS: Record<string, number> = {
-  premium: 2.5,
+  premium: 3.5,
   pro: 4,
   'original remanufaturada': 5,
 };
