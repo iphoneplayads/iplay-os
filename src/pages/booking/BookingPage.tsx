@@ -431,8 +431,8 @@ export function BookingPage() {
           ) : (
             <>
               <PriceCard
-                title={flow.selectedService?.name ?? 'Serviço'}
-                subtitle={flow.selectedOption?.name ?? ''}
+                title={flow.selectedService?.slug === SERVICE_SLUGS.battery ? 'Bateria Premium' : (flow.selectedService?.name ?? 'Serviço')}
+                subtitle={flow.selectedService?.slug === SERVICE_SLUGS.battery ? 'Homologada pela ANATEL · 6 meses de garantia' : (flow.selectedOption?.name ?? '')}
                 price={flow.price}
               />
               {selectedFilm && (
@@ -447,7 +447,12 @@ export function BookingPage() {
                 {flow.selectedOption && (
                   <div className="flex justify-between gap-2"><dt className="text-cinza">Opção</dt><dd className="font-semibold text-gelo">{flow.selectedOption.name}</dd></div>
                 )}
-                {warrantyLabel && (
+                {flow.selectedService?.slug === SERVICE_SLUGS.battery ? (
+                  <>
+                    <div className="flex justify-between gap-2"><dt className="text-cinza">Certificação</dt><dd className="font-semibold text-gelo">Homologada pela ANATEL</dd></div>
+                    <div className="flex justify-between gap-2"><dt className="text-cinza">Garantia</dt><dd className="font-semibold text-lima">6 meses de garantia</dd></div>
+                  </>
+                ) : warrantyLabel && (
                   <div className="flex justify-between gap-2"><dt className="text-cinza">Garantia</dt><dd className="font-semibold text-lima">{warrantyLabel}</dd></div>
                 )}
               </dl>
