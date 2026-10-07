@@ -10,7 +10,7 @@ export const APP_CONFIG = {
     id: 'company-iplay',
     slug: 'iplay',
     name: 'iPlay',
-    whatsapp: '5521980047779', // preview deploy trigger
+    whatsapp: '5521980047779',
     phone: '(21) 98004-7779',
   },
   useMock: import.meta.env.VITE_USE_MOCK !== 'false',
