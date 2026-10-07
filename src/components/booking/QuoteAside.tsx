@@ -47,18 +47,18 @@ export function QuoteAside({
             <EditButton onClick={() => onEdit('option')} />
           </dd>
         </div>
-        <div className="flex items-center justify-between gap-2 border-t border-linha pt-1.5">
-          <dt className="text-cinza">Pix</dt>
-          <dd className="font-display text-lg font-extrabold text-lima">
-            {selection.price ? formatBRL(effectivePix(selection.price)) : '—'}
+        <div className="flex items-center justify-between gap-2 border-t border-linha pt-2">
+          <dt className="text-cinza">Cartão</dt>
+          <dd className="text-right font-display text-base font-extrabold text-gelo">
+            {selection.price
+              ? `${MAX_CARD_INSTALLMENTS}x de ${formatBRL(displayInstallment(effectiveCard(selection.price)))}`
+              : '—'}
           </dd>
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <dt className="text-cinza">Cartão</dt>
-          <dd className="text-right text-xs font-semibold text-gelo">
-            {selection.price
-              ? `${formatBRL(effectiveCard(selection.price))} · até ${MAX_CARD_INSTALLMENTS}x de ${formatBRL(displayInstallment(effectiveCard(selection.price)))}`
-              : '—'}
+        <div className="flex items-start justify-between gap-3">
+          <dt className="pt-0.5 text-cinza">PIX</dt>
+          <dd className="max-w-[175px] text-right text-sm font-bold text-lima">
+            {selection.price ? <>{formatBRL(effectivePix(selection.price))}<span className="block text-[11px] font-semibold text-cinza">com desconto no PIX</span></> : '—'}
           </dd>
         </div>
         <div className="flex items-center justify-between gap-2">
