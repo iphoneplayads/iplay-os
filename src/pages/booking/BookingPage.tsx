@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { APP_CONFIG } from '@/config/app';
+import { SERVICE_SLUGS } from '@/config/constants';
 import { AppointmentSummary } from '@/components/booking/AppointmentSummary';
 import { BookingStep, ProgressIndicator } from '@/components/booking/BookingChrome';
 import { AddressForm, CustomerForm, NotesInput } from '@/components/booking/Forms';
@@ -300,7 +301,12 @@ export function BookingPage() {
               if (flow.serviceId && flow.serviceId !== id) flow.clearOptionSelection();
               flow.setServiceId(id);
               trackEvent('service_selected', { serviceId: id });
-              pendingServiceOptions.current = await flow.loadOptions(id);
+              const loadedOptions = await flow.loadOptions(id);
+              const selectedService = flow.services.find((service) => service.id === id);
+              pendingServiceOptions.current =
+                selectedService?.slug === SERVICE_SLUGS.battery
+                  ? loadedOptions.filter((option) => option.name.trim().toLowerCase().includes('premium')).slice(0, 1)
+                  : loadedOptions;
               setUpsellOpen(true);
               const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
               window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
