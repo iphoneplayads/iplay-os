@@ -93,7 +93,7 @@ export function HomePage() {
         />
         <div className="relative grid items-center gap-10 lg:grid-cols-[1.2fr_1fr] lg:gap-12">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-linha bg-noite px-3 py-1 text-xs font-bold text-gelo">
+            <p className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-linha bg-noite px-2.5 py-1 text-[11px] font-bold text-gelo sm:gap-2 sm:px-3 sm:text-xs">
               <span aria-hidden="true" className="h-2 w-2 rounded-full bg-lima" />
               Assistência técnica especializada em iPhone
             </p>
