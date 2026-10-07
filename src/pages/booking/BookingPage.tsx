@@ -393,6 +393,12 @@ export function BookingPage() {
                 subtitle={`${flow.selectedModel?.name ?? ''}${flow.selectedOption ? ` · ${flow.selectedOption.name}` : ''}`}
                 price={flow.price}
               />
+              {selectedFilm && (
+                <div className="mt-3 flex items-center justify-between rounded-2xl border border-linha bg-musgo px-4 py-3 text-sm">
+                  <span className="text-cinza">Película selecionada</span>
+                  <span className="font-bold text-gelo">Película {selectedFilm}</span>
+                </div>
+              )}
               <dl className="mt-3 space-y-1 rounded-2xl border border-linha bg-musgo p-4 text-sm text-nevoa">
                 <div className="flex justify-between gap-2"><dt className="text-cinza">Modelo</dt><dd className="font-semibold text-gelo">{flow.selectedModel?.name ?? '—'}</dd></div>
                 <div className="flex justify-between gap-2"><dt className="text-cinza">Serviço</dt><dd className="font-semibold text-gelo">{flow.selectedService?.name ?? '—'}</dd></div>
