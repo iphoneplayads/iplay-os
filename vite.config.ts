@@ -48,7 +48,7 @@ function seoFiles(): Plugin {
 const mirrorFiles = (): Plugin => ({
   name: 'iplay-mirror-files',
   transformIndexHtml(html) {
-    return html.replace('</head>', '    <meta name="robots" content="noindex,nofollow" />\\n  </head>');
+    return html.replace('</head>', '    <meta name="robots" content="noindex,nofollow" />\n  </head>');
   },
   generateBundle() {
     this.emitFile({
@@ -64,13 +64,13 @@ const mirrorFiles = (): Plugin => ({
         '  RewriteRule ^ index.html [L]',
         '</IfModule>',
         '',
-      ].join('\\n'),
+      ].join('\n'),
     });
   },
 });
 
 export default defineConfig(({ mode }) => {
-  const mirror = mode === 'mirror';
+  const mirror = process.env.VITE_MIRROR_BUILD === '1';
   return {
   base: mirror ? '/site/' : process.env.GITHUB_ACTIONS ? '/iplay-os/' : '/',
   plugins: [react(), tailwindcss(), ...(mirror ? [mirrorFiles()] : [seoFiles()])],
