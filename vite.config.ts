@@ -44,15 +44,44 @@ function seoFiles(): Plugin {
 }
 
 // https://vite.dev/config/
-export default defineConfig({
-  base: process.env.GITHUB_ACTIONS ? '/iplay-os/' : '/',
-  plugins: [react(), tailwindcss(), seoFiles()],
+/** Generate an isolated copy under /site/ from the very same React/Vite source. */
+const mirrorFiles = (): Plugin => ({
+  name: 'iplay-mirror-files',
+  transformIndexHtml(html) {
+    return html.replace('</head>', '    <meta name="robots" content="noindex,nofollow" />\n  </head>');
+  },
+  generateBundle() {
+    this.emitFile({
+      type: 'asset',
+      fileName: '.htaccess',
+      source: [
+        'DirectoryIndex index.html',
+        '<IfModule mod_rewrite.c>',
+        '  RewriteEngine On',
+        '  RewriteBase /site/',
+        '  RewriteCond %{REQUEST_FILENAME} !-f',
+        '  RewriteCond %{REQUEST_FILENAME} !-d',
+        '  RewriteRule ^ index.html [L]',
+        '</IfModule>',
+        '',
+      ].join('\n'),
+    });
+  },
+});
+
+export default defineConfig(() => {
+  const mirror = process.env.VITE_MIRROR_BUILD === '1';
+  return {
+  base: mirror ? '/site/' : process.env.GITHUB_ACTIONS ? '/iplay-os/' : '/',
+  plugins: [react(), tailwindcss(), ...(mirror ? [mirrorFiles()] : [seoFiles()])],
   resolve: {
     alias: {
       '@': path.resolve(dirname, 'src'),
     },
   },
   build: {
+    outDir: mirror ? 'dist/site' : 'dist',
+    emptyOutDir: true,
     rollupOptions: {
       // FASE 4.1 §26: code splitting simples e seguro — supabase-js em chunk
       // separado (só carrega o peso quando o módulo é importado).
@@ -63,4 +92,5 @@ export default defineConfig({
       },
     },
   },
+  };
 });
