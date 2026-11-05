@@ -69,7 +69,7 @@ const mirrorFiles = (): Plugin => ({
   },
 });
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(() => {
   const mirror = process.env.VITE_MIRROR_BUILD === '1';
   return {
   base: mirror ? '/site/' : process.env.GITHUB_ACTIONS ? '/iplay-os/' : '/',
